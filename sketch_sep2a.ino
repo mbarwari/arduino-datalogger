@@ -10,15 +10,15 @@ unsigned long waqt;
 
 
 //Mux1 control pins
-int mux1_s0 = 10;
-int mux1_s1 = 9;
-int mux1_s2 = 8;
-int mux1_s3 = 7;
+int mux1_s0 = 9;
+int mux1_s1 = 8;
+int mux1_s2 = 7;
+int mux1_s3 = 6;
 
 /*
 //Mux2 control pins
-int mux2_s0 = 6;
-int mux2_s1 = 5;
+int mux2_s0 = 5;
+int mux2_s1 = 4;
 int mux2_s2 = 3;
 int mux2_s3 = 2;
 */
@@ -73,7 +73,7 @@ void loop(){
     Serial.print(" ");
     Serial.println(temp);
 
-    myFile = SD.open("test.txt", FILE_WRITE);
+    myFile = SD.open("report.txt", FILE_WRITE);
     if (myFile) {
       myFile.print(waqt);
       myFile.print(" ");
@@ -83,8 +83,6 @@ void loop(){
       myFile.println(temp);
     }
     myFile.close();
-
-    delay(0);
   }
 
   /*
@@ -176,7 +174,7 @@ void setMicroSDMod() {
     while (1);
   }
   
-  myFile = SD.open("test.txt", FILE_WRITE);
+  myFile = SD.open("report.txt", FILE_WRITE);
   if (myFile) {
     Serial.print("Creating file...\n");
     myFile.println("______________________________________________________________________");
