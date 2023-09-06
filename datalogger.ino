@@ -5,7 +5,6 @@
 #define BCOEFFICIENT 3895
 #define THERMISTORNOMINAL 10000 
 #define TEMPERATURENOMINAL 25 
-#define SIG_pin A0
 unsigned long waqt;
 
 
@@ -15,16 +14,15 @@ int mux1_s1 = 8;
 int mux1_s2 = 7;
 int mux1_s3 = 6;
 
-/*
 //Mux2 control pins
 int mux2_s0 = 5;
 int mux2_s1 = 4;
 int mux2_s2 = 3;
 int mux2_s3 = 2;
-*/
 
 //Mux in "SIG" pin
-//int SIG_pin = 0;
+int mux1_sig = 0;
+int mux2_sig = 1;
 
 //create file object (global variable)
 File myFile;
@@ -42,7 +40,6 @@ void setup(){
   digitalWrite(mux1_s2, LOW);
   digitalWrite(mux1_s3, LOW);
 
-  /*
   pinMode(mux2_s0, OUTPUT); 
   pinMode(mux2_s1, OUTPUT); 
   pinMode(mux2_s2, OUTPUT); 
@@ -52,7 +49,6 @@ void setup(){
   digitalWrite(mux2_s1, LOW);
   digitalWrite(mux2_s2, LOW);
   digitalWrite(mux2_s3, LOW);
-  */
 
   Serial.begin(9600);
 
@@ -85,13 +81,28 @@ void loop(){
     myFile.close();
   }
 
-  /*
   //Loop through and read all 16 values from mux 2
-  
+  for(int i = 0; i < 16; i ++){
+    float temp = readMux(i, 2);
 
+    Serial.print(waqt);
+    Serial.print(" ");
+    Serial.print("C");
+    Serial.print(i+16);
+    Serial.print(" ");
+    Serial.println(temp);
 
-  */
-
+    myFile = SD.open("report.txt", FILE_WRITE);
+    if (myFile) {
+      myFile.print(waqt);
+      myFile.print(" ");
+      myFile.print("C");
+      myFile.print(i+16);
+      myFile.print(" ");
+      myFile.println(temp);
+    }
+    myFile.close();
+  }
 
   delay(1000);
 }
@@ -100,21 +111,22 @@ void loop(){
 float readMux(int channel, int mux){
 
   int controlPin[4];
+  int sig_pin; 
   
   if(mux == 1){
     controlPin[0] = mux1_s0;
     controlPin[1] = mux1_s1;
     controlPin[2] = mux1_s2;
     controlPin[3] = mux1_s3;
+    sig_pin = mux1_sig; 
   }
-  /*
   else if(mux == 2){
     controlPin[0] = mux2_s0;
     controlPin[1] = mux2_s1;
     controlPin[2] = mux2_s2;
     controlPin[3] = mux2_s3;
+    sig_pin = mux2_sig; 
   }
-  */
 
   int muxChannel[16][4]={
     {0,0,0,0}, //channel 0
@@ -148,7 +160,7 @@ float readMux(int channel, int mux){
   for (j=0; j< NUMSAMPLES; j++) {          // take N samples in a row, with a slight delay
     //Serial.println(val[j]);
 
-    val[j] = analogRead(SIG_pin);
+    val[j] = analogRead(sig_pin);
     //Serial.println(val[j]);
     delay(0);
   }
