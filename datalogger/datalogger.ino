@@ -23,23 +23,23 @@ int keyIndex = 0;           // your network key index number (needed only for WE
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
-//Mux1 control pins
+// Mux1 control pins
 int mux1_s0 = 9;
 int mux1_s1 = 8;
 int mux1_s2 = 7;
 int mux1_s3 = 6;
 
-//Mux2 control pins
+// Mux2 control pins
 int mux2_s0 = 5;
 int mux2_s1 = 4;
 int mux2_s2 = 3;
 int mux2_s3 = 2;
 
-//Mux in "SIG" pin
+// Mux in "SIG" pin
 int mux1_sig = 0;
 int mux2_sig = 1;
 
-//create file object (global variable)
+// Create file object
 File myFile;
 String str_time;
 int sd_flag = 0;
@@ -56,7 +56,7 @@ void setup() {
   digitalWrite(mux1_s2, LOW);
   digitalWrite(mux1_s3, LOW);
 
-  /*comment out for 2 mux 
+  /* comment out for 2 mux 
 
   pinMode(mux2_s0, OUTPUT); 
   pinMode(mux2_s1, OUTPUT); 
@@ -82,7 +82,7 @@ void setup() {
 
 void loop() {
 
-  //Loop through and read all 16 values from mux 1
+  // Loop through and read all 16 values from mux 1
   for (int i = 0; i < 16; i++) {
     float temp = readMux(i, 1);
 
@@ -105,9 +105,9 @@ void loop() {
     }
   }
 
-  /*comment out for 2 mux 
+  /* comment out for 2 mux 
 
-  //Loop through and read all 16 values from mux 2
+  // Loop through and read all 16 values from mux 2
   for(int i = 0; i < 16; i ++){
     float temp = readMux(i, 2);
 
@@ -173,7 +173,7 @@ void loop() {
               client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i) + " " + String(temp) + "</p>");  
             }
 
-            /* comment out foor 2 mux 
+            /* comment out for 2 mux 
             for(int i = 0; i < 16; i ++){
               float temp = readMux(i, 2);
 
@@ -240,12 +240,12 @@ float readMux(int channel, int mux) {
     { 1, 1, 1, 1 }   //channel 15
   };
 
-  //loop through the 4 sig
+  // loop through the 4 sig
   for (int i = 0; i < 4; i++) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
-  //read the value at the SIG pin
+  // read the value at the SIG pin
   uint8_t j = 0;
   waqt = millis() / 1000;
   uint16_t val[NUMSAMPLES] = { 0 };
