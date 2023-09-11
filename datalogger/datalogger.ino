@@ -1,7 +1,7 @@
 /*
 Datalogger program 
 
-DATE: 8/10/2023
+DATE: 8/11/2023
 NOTE: comment out specified multiline comment blocks for 2 mux 
 */
 
@@ -42,6 +42,7 @@ int mux2_sig = 1;
 //create file object (global variable)
 File myFile;
 String str_time;
+int sd_flag = 0;
 
 
 void setup() {
@@ -91,15 +92,17 @@ void loop() {
     Serial.print(" ");
     Serial.println(temp);
 
-    myFile = SD.open("report.txt", FILE_WRITE);
-    if (myFile) {
-      myFile.print(waqt);
-      myFile.print(" C");
-      myFile.print(i);
-      myFile.print(" ");
-      myFile.println(temp);
+    if(sd_flag == 1){
+      myFile = SD.open("report.txt", FILE_WRITE);
+      if (myFile) {
+        myFile.print(waqt);
+        myFile.print(" C");
+        myFile.print(i);
+        myFile.print(" ");
+        myFile.println(temp);
+      }
+      myFile.close();
     }
-    myFile.close();
   }
 
   /*comment out for 2 mux 
@@ -114,15 +117,17 @@ void loop() {
     Serial.print(" ");
     Serial.println(temp);
 
-    myFile = SD.open("report.txt", FILE_WRITE);
-    if (myFile) {
-      myFile.print(waqt);
-      myFile.print(" C");
-      myFile.print(i+16);
-      myFile.print(" ");
-      myFile.println(temp);
+    if(sd_flag == 1){
+      myFile = SD.open("report.txt", FILE_WRITE);
+      if (myFile) {
+        myFile.print(waqt);
+        myFile.print(" C");
+        myFile.print(i+16);
+        myFile.print(" ");
+        myFile.println(temp);
+      }
+      myFile.close();
     }
-    myFile.close();
   }
 
   */
@@ -267,21 +272,25 @@ float readMux(int channel, int mux) {
 void setMicroSDMod() {
 
   if (SD.begin()) {
-    Serial.print("SD Card initialization successful\n");
+    Serial.println("SD Card initialization successful");
+    sd_flag = 1; 
   } else {
-    Serial.print("SD Card initialization failed\n");
-    while (1);
+    Serial.println("SD Card initialization failed");
+    Serial.println("Program continue - No sd card datalogging");
   }
 
-  myFile = SD.open("report.txt", FILE_WRITE);
-  if (myFile) {
-    Serial.print("Creating file...\n");
-    myFile.println("______________________________________________________________________");
-    myFile.println("Seconds, Channel, Temperature(degrees celsius)");
-  } else {
-    Serial.print("Error opeing file\n");
+  if (sd_flag == 1){
+    myFile = SD.open("report.txt", FILE_WRITE);
+    if (myFile) {
+      Serial.println("Creating file...");
+      myFile.println("______________________________________________________________________");
+      myFile.println("Seconds, Channel, Temperature(degrees celsius)");
+    } else {
+      Serial.println("Error opeing file");
+    }
+    myFile.close();
   }
-  myFile.close();
+  
 }
 
 void setWiFi() {
