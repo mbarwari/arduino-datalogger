@@ -1,7 +1,7 @@
 /*
 Datalogger program 
 
-DATE: 8/9/2023
+DATE: 8/10/2023
 NOTE: comment out specified multiline comment blocks for 2 mux 
 */
 
@@ -73,10 +73,7 @@ void setup() {
 
   setMicroSDMod();
 
-  wifiSetUp();
-
-  // wait 10 seconds for connection:
-  delay(10000);
+  setWiFi();
 
   // start the web server on port 80
   server.begin();
@@ -160,14 +157,11 @@ void loop() {
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
 
+            // meta data for refreshing page and setting page refresh interval 
+            client.println("<head><meta http-equiv=\"refresh\" content=\"5\"></head>");
 
-            // the content of the HTTP response follows the header:
+            // the content of the HTTP response:
             for(int i = 0; i < 16; i ++){
               float temp = readMux(i, 1);
 
@@ -181,10 +175,6 @@ void loop() {
               client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i+16) + " " + String(temp) + "</p>");  
             }
             */
-
-
-            // The HTTP response ends with another blank line:
-            client.println();
 
             // break out of the while loop:
             break;
@@ -280,8 +270,7 @@ void setMicroSDMod() {
     Serial.print("SD Card initialization successful\n");
   } else {
     Serial.print("SD Card initialization failed\n");
-    while (1)
-      ;
+    while (1);
   }
 
   myFile = SD.open("report.txt", FILE_WRITE);
@@ -295,7 +284,7 @@ void setMicroSDMod() {
   myFile.close();
 }
 
-void wifiSetUp() {
+void setWiFi() {
 
   Serial.println("Access Point Web Server");
 
@@ -303,8 +292,7 @@ void wifiSetUp() {
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
-    while (true)
-      ;
+    while (true);
   }
 
   String fv = WiFi.firmwareVersion();
@@ -325,9 +313,11 @@ void wifiSetUp() {
   if (status != WL_AP_LISTENING) {
     Serial.println("Creating access point failed");
     // don't continue
-    while (true)
-      ;
+    while (true);
   }
+
+  // wait 10 seconds for connection:
+  delay(10000);
 }
 
 void printWiFiStatus() {
