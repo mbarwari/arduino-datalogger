@@ -1,7 +1,7 @@
 /*
 Datalogger program 
 
-DATE: 8/11/2023
+DATE: 8/12/2023
 NOTE: comment out specified multiline comment blocks for 2 mux 
 */
 
@@ -56,8 +56,6 @@ void setup() {
   digitalWrite(mux1_s2, LOW);
   digitalWrite(mux1_s3, LOW);
 
-  /* comment out for 2 mux 
-
   pinMode(mux2_s0, OUTPUT); 
   pinMode(mux2_s1, OUTPUT); 
   pinMode(mux2_s2, OUTPUT); 
@@ -67,8 +65,6 @@ void setup() {
   digitalWrite(mux2_s1, LOW);
   digitalWrite(mux2_s2, LOW);
   digitalWrite(mux2_s3, LOW);
-
-  */
 
   Serial.begin(9600);
 
@@ -105,8 +101,6 @@ void loop() {
     }
   }
 
-  /* comment out for 2 mux 
-
   // Loop through and read all 16 values from mux 2
   for(int i = 0; i < 16; i ++){
     float temp = readMux(i, 2);
@@ -129,8 +123,6 @@ void loop() {
       myFile.close();
     }
   }
-
-  */
 
 
   // compare the previous status to the current status
@@ -173,13 +165,12 @@ void loop() {
               client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i) + " " + String(temp) + "</p>");  
             }
 
-            /* comment out for 2 mux 
             for(int i = 0; i < 16; i ++){
               float temp = readMux(i, 2);
 
               client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i+16) + " " + String(temp) + "</p>");  
             }
-            */
+       
 
             // break out of the while loop:
             break;
