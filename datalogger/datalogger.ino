@@ -7,6 +7,7 @@ NOTE: comment out specified multiline comment blocks for 2 mux
 
 #include <SD.h>
 #include "WiFiS3.h"
+//#include <TimeLib.h>
 
 #define NUMSAMPLES 10
 #define SERIESRESISTOR 10000
@@ -15,7 +16,7 @@ NOTE: comment out specified multiline comment blocks for 2 mux
 #define TEMPERATURENOMINAL 25
 unsigned long waqt;
 
-#define SECRET_SSID "testAP"
+#define SECRET_SSID "pigTrial"
 #define SECRET_PASS "123456789"
 char ssid[] = SECRET_SSID;  // your network SSID (name)
 char pass[] = SECRET_PASS;  // your network password (use for WPA, or use as key for WEP)
@@ -67,6 +68,9 @@ void setup() {
   digitalWrite(mux2_s3, LOW);
 
   Serial.begin(9600);
+
+  //String timeDateStr= getTimeAndDate();
+  //setMicroSDMod(timeDateStr);
 
   setMicroSDMod();
 
@@ -140,53 +144,28 @@ void loop() {
   }
   
   WiFiClient client = server.available();   // listen for incoming clients
+  
+  if (client){                             // if you get a client,
+    for (int i = 0; i < 16; i++) {
+      float temp = readMux(i, 1);
 
-  if (client) {                             // if you get a client,
-    Serial.println("new client");           // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      delayMicroseconds(10);                // This is required for the Arduino Nano RP2040 Connect - otherwise it will loop so fast that SPI will never be served.
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out to the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
-
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-
-            // meta data for refreshing page and setting page refresh interval 
-            client.println("<head><meta http-equiv=\"refresh\" content=\"5\"></head>");
-
-            // the content of the HTTP response:
-            for(int i = 0; i < 16; i ++){
-              float temp = readMux(i, 1);
-
-              client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i) + " " + String(temp) + "</p>");  
-            }
-
-            for(int i = 0; i < 16; i ++){
-              float temp = readMux(i, 2);
-
-              client.print("<p style=\"font-size:2vw;\">" + String(waqt) + " C" + String(i+16) + " " + String(temp) + "</p>");  
-            }
-       
-
-            // break out of the while loop:
-            break;
-          }
-          else {      // if you got a newline, then clear currentLine:
-            currentLine = "";
-          }
-        }
-        else if (c != '\r') {    // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
-      }
+      client.print(waqt);
+      client.print(" C");
+      client.print(i);
+      client.print(" ");
+      client.println(temp);
     }
-    // close the connection:
-    client.stop();
-    Serial.println("client disconnected");
+
+    for (int i = 0; i < 16; i++) {
+      float temp = readMux(i, 2);
+
+      client.print(waqt);
+      client.print(" C");
+      client.print(i+16);
+      client.print(" ");
+      client.println(temp);
+    }
+
   }
 
   delay(1000);
@@ -260,6 +239,29 @@ float readMux(int channel, int mux) {
   return steinhart;
 }
 
+/*
+String getTimeAndDate(){
+
+  String timeDateStr = "";
+
+  time_t t = now(); 
+
+  timeDateStr += hour(t);
+  timeDateStr += ":";
+  timeDateStr += minute(t);
+  timeDateStr += ":";
+  timeDateStr += second(t);
+
+  timeDateStr += day(t);
+  timeDateStr += "/";
+  timeDateStr += month(t);
+  timeDateStr += "/";
+  timeDateStr += year(t);
+  
+  return timeDateStr;
+}
+*/
+
 void setMicroSDMod() {
 
   if (SD.begin()) {
@@ -267,14 +269,15 @@ void setMicroSDMod() {
     sd_flag = 1; 
   } else {
     Serial.println("SD Card initialization failed");
-    Serial.println("Program continue - No sd card datalogging");
+    Serial.println("Program continue - No datalogging");
   }
 
   if (sd_flag == 1){
+    //Serial.println(timeDateStr);
     myFile = SD.open("report.txt", FILE_WRITE);
     if (myFile) {
       Serial.println("Creating file...");
-      myFile.println("______________________________________________________________________");
+      myFile.println("______________________________________________");
       myFile.println("Seconds, Channel, Temperature(degrees celsius)");
     } else {
       Serial.println("Error opeing file");
