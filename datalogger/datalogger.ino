@@ -68,6 +68,7 @@ void setup() {
   digitalWrite(mux2_s3, LOW);
 
   Serial.begin(9600);
+  analogreference(AR_EXTERNAL);
 
   //String timeDateStr= getTimeAndDate();
   //setMicroSDMod(timeDateStr);
