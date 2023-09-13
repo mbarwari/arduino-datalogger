@@ -7,7 +7,6 @@ NOTE: comment out specified multiline comment blocks for 2 mux
 
 #include <SD.h>
 #include "WiFiS3.h"
-//#include <TimeLib.h>
 
 #define NUMSAMPLES 10
 #define SERIESRESISTOR 10000
@@ -68,10 +67,8 @@ void setup() {
   digitalWrite(mux2_s3, LOW);
 
   Serial.begin(9600);
+  
   analogreference(AR_EXTERNAL);
-
-  //String timeDateStr= getTimeAndDate();
-  //setMicroSDMod(timeDateStr);
 
   setMicroSDMod();
 
@@ -240,29 +237,6 @@ float readMux(int channel, int mux) {
   return steinhart;
 }
 
-/*
-String getTimeAndDate(){
-
-  String timeDateStr = "";
-
-  time_t t = now(); 
-
-  timeDateStr += hour(t);
-  timeDateStr += ":";
-  timeDateStr += minute(t);
-  timeDateStr += ":";
-  timeDateStr += second(t);
-
-  timeDateStr += day(t);
-  timeDateStr += "/";
-  timeDateStr += month(t);
-  timeDateStr += "/";
-  timeDateStr += year(t);
-  
-  return timeDateStr;
-}
-*/
-
 void setMicroSDMod() {
 
   if (SD.begin()) {
@@ -274,7 +248,6 @@ void setMicroSDMod() {
   }
 
   if (sd_flag == 1){
-    //Serial.println(timeDateStr);
     myFile = SD.open("report.txt", FILE_WRITE);
     if (myFile) {
       Serial.println("Creating file...");
