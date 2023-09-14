@@ -80,53 +80,6 @@ void setup() {
 
 void loop() {
 
-  // Loop through and read all 16 values from mux 1
-  for (int i = 0; i < 16; i++) {
-    float temp = readMux(i, 1);
-
-    Serial.print(waqt);
-    Serial.print(" C");
-    Serial.print(i);
-    Serial.print(" ");
-    Serial.println(temp);
-
-    if(sd_flag == 1){
-      myFile = SD.open("report.txt", FILE_WRITE);
-      if (myFile) {
-        myFile.print(waqt);
-        myFile.print(" C");
-        myFile.print(i);
-        myFile.print(" ");
-        myFile.println(temp);
-      }
-      myFile.close();
-    }
-  }
-
-  // Loop through and read all 16 values from mux 2
-  for(int i = 0; i < 16; i ++){
-    float temp = readMux(i, 2);
-
-    Serial.print(waqt);
-    Serial.print(" C");
-    Serial.print(i+16);
-    Serial.print(" ");
-    Serial.println(temp);
-
-    if(sd_flag == 1){
-      myFile = SD.open("report.txt", FILE_WRITE);
-      if (myFile) {
-        myFile.print(waqt);
-        myFile.print(" C");
-        myFile.print(i+16);
-        myFile.print(" ");
-        myFile.println(temp);
-      }
-      myFile.close();
-    }
-  }
-
-
   // compare the previous status to the current status
   if (status != WiFi.status()) {
     // it has changed update the variable
@@ -143,25 +96,69 @@ void loop() {
   
   WiFiClient client = server.available();   // listen for incoming clients
   
-  if (client){                             // if you get a client,
-    for (int i = 0; i < 16; i++) {
-      float temp = readMux(i, 1);
+  if (client){      
+    // if you get a client
 
-      client.print(waqt);
-      client.print(" C");
-      client.print(i);
-      client.print(" ");
-      client.println(temp);
+    // Loop through and read all 16 values from mux 1
+    for (int i = 0; i < 16; i++) {
+        float temp = readMux(i, 1);
+
+        /*
+        Serial.print(waqt);
+        Serial.print(" C");
+        Serial.print(i);
+        Serial.print(" ");
+        Serial.println(temp);
+        */
+
+        client.print(waqt);
+        client.print(" C");
+        client.print(i);
+        client.print(" ");
+        client.println(temp);
+
+        if(sd_flag == 1){
+        myFile = SD.open("report.txt", FILE_WRITE);
+        if (myFile) {
+            myFile.print(waqt);
+            myFile.print(" C");
+            myFile.print(i);
+            myFile.print(" ");
+            myFile.println(temp);
+        }
+        myFile.close();
+        }
     }
 
-    for (int i = 0; i < 16; i++) {
-      float temp = readMux(i, 2);
+    // Loop through and read all 16 values from mux 2
+    for(int i = 0; i < 16; i ++){
+        float temp = readMux(i, 2);
 
-      client.print(waqt);
-      client.print(" C");
-      client.print(i+16);
-      client.print(" ");
-      client.println(temp);
+        /*
+        Serial.print(waqt);
+        Serial.print(" C");
+        Serial.print(i+16);
+        Serial.print(" ");
+        Serial.println(temp);
+        */
+        
+        client.print(waqt);
+        client.print(" C");
+        client.print(i+16);
+        client.print(" ");
+        client.println(temp);
+
+        if(sd_flag == 1){
+        myFile = SD.open("report.txt", FILE_WRITE);
+        if (myFile) {
+            myFile.print(waqt);
+            myFile.print(" C");
+            myFile.print(i+16);
+            myFile.print(" ");
+            myFile.println(temp);
+        }
+        myFile.close();
+        }
     }
 
   }
