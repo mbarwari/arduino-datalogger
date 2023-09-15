@@ -2,7 +2,6 @@
 Datalogger program 
 */
 
-#include <SD.h>
 #include "WiFiS3.h"
 
 #define NUMSAMPLES 10
