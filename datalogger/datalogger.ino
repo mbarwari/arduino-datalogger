@@ -63,7 +63,7 @@ void setup() {
 
   Serial.begin(9600);
   
-  analogreference(AR_EXTERNAL);
+  analogReference(AR_EXTERNAL);
 
   setWiFi();
 
