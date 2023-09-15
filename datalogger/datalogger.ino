@@ -1,8 +1,5 @@
 /*
 Datalogger program 
-
-DATE: 8/12/2023
-NOTE: comment out specified multiline comment blocks for 2 mux 
 */
 
 #include <SD.h>
