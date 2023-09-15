@@ -39,11 +39,6 @@ int mux2_s3 = 2;
 int mux1_sig = 0;
 int mux2_sig = 1;
 
-// Create file object
-File myFile;
-String str_time;
-int sd_flag = 0;
-
 
 void setup() {
   pinMode(mux1_s0, OUTPUT);
@@ -70,11 +65,8 @@ void setup() {
   
   analogreference(AR_EXTERNAL);
 
-  setMicroSDMod();
-
   setWiFi();
 
-  // start the web server on port 80
   server.begin();
 }
 
@@ -116,18 +108,6 @@ void loop() {
         client.print(i);
         client.print(" ");
         client.println(temp);
-
-        if(sd_flag == 1){
-        myFile = SD.open("report.txt", FILE_WRITE);
-        if (myFile) {
-            myFile.print(waqt);
-            myFile.print(" C");
-            myFile.print(i);
-            myFile.print(" ");
-            myFile.println(temp);
-        }
-        myFile.close();
-        }
     }
 
     // Loop through and read all 16 values from mux 2
@@ -147,18 +127,6 @@ void loop() {
         client.print(i+16);
         client.print(" ");
         client.println(temp);
-
-        if(sd_flag == 1){
-        myFile = SD.open("report.txt", FILE_WRITE);
-        if (myFile) {
-            myFile.print(waqt);
-            myFile.print(" C");
-            myFile.print(i+16);
-            myFile.print(" ");
-            myFile.println(temp);
-        }
-        myFile.close();
-        }
     }
 
   }
@@ -232,30 +200,6 @@ float readMux(int channel, int mux) {
   //Serial.println(avgval);
   float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
   return steinhart;
-}
-
-void setMicroSDMod() {
-
-  if (SD.begin()) {
-    Serial.println("SD Card initialization successful");
-    sd_flag = 1; 
-  } else {
-    Serial.println("SD Card initialization failed");
-    Serial.println("Program continue - No datalogging");
-  }
-
-  if (sd_flag == 1){
-    myFile = SD.open("report.txt", FILE_WRITE);
-    if (myFile) {
-      Serial.println("Creating file...");
-      myFile.println("______________________________________________");
-      myFile.println("Seconds, Channel, Temperature(degrees celsius)");
-    } else {
-      Serial.println("Error opeing file");
-    }
-    myFile.close();
-  }
-  
 }
 
 void setWiFi() {
