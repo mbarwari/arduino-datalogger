@@ -35,6 +35,40 @@ int mux2_s3 = 2;
 int mux1_sig = 0;
 int mux2_sig = 1;
 
+String order[] = { 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ", 
+  "MUX 1 - Device         ",
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Inline tsensor ", 
+  "MUX 1 - Trio device    ",
+  "MUX 1 - Trio device    ", 
+  "MUX 1 - Trio device    ",
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - Trio waterblock", 
+  "MUX 2 - Trio waterblock", 
+  "MUX 2 - Trio waterblock", 
+  "MUX 2 - Trio waterblock",
+  "MUX 2 - Trio waterblock", 
+  "MUX 2 - Trio waterblock", 
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - Inline tsensor ", 
+  "MUX 2 - None           ", 
+  "MUX 2 - None           ",
+  "MUX 2 - None           ", 
+  "MUX 2 - None           "
+};
 
 void setup() {
   pinMode(mux1_s0, OUTPUT);
@@ -100,6 +134,8 @@ void loop() {
         */
 
         client.print(waqt);
+        client.print(" ");
+        client.print(order[i]);
         client.print(" C");
         client.print(i);
         client.print(" ");
@@ -119,6 +155,8 @@ void loop() {
         */
         
         client.print(waqt);
+        client.print(" ");
+        client.print(order[i+16]);
         client.print(" C");
         client.print(i+16);
         client.print(" ");
@@ -127,7 +165,7 @@ void loop() {
 
   }
 
-  delay(1000);
+  delay(5000);
 }
 
 
@@ -152,7 +190,7 @@ float readMux(int channel, int mux) {
 
   int muxChannel[16][4] = {
     { 0, 0, 0, 0 },  //channel 0
-    { 0, 0, 0, 0 },  //channel 1
+    { 1, 0, 0, 0 },  //channel 1
     { 0, 1, 0, 0 },  //channel 2
     { 1, 1, 0, 0 },  //channel 3
     { 0, 0, 1, 0 },  //channel 4
