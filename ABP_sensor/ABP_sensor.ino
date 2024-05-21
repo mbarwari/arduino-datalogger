@@ -25,8 +25,11 @@ const int pressureSensorPin = A0;
 const float Vsupply = 5.0; // Supply voltage
 const float Pmin = 0; // Minimum pressure in PSI
 const float Pmax = 15; // Maximum pressure in PSI
+
+/*
 const float Vmin = 0.10 * Vsupply; // Minimum output voltage
 const float Vmax = 0.90 * Vsupply; // Maximum output voltage
+*/
 
 void setup() {
   analogReadResolution(14); // Increase dafault 10-bit ADC resolution to 14-bit 
