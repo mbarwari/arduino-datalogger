@@ -10,7 +10,9 @@ Sensor       Arduino
 5.SCL (Green)   ->   SCL 
 6.NC (Empty)    ->   NC
 
- 
+Pull-up resistors: 
+  1.8K pull-up resistor from VDD to SDA 
+  1.8K pull-up resistor from VDD to SCL
 
 */ 
 
@@ -19,13 +21,34 @@ Sensor       Arduino
 
 SensirionI2cSf06Lf sensor;
 
-
 void setup() {
-  analogReadResolution(14);  // Increase dafault 10-bit ADC resolution to 14-bit
-  Serial.begin(9600);        // Initialize serial communication
+
+    Serial.begin(9600);
+    while (!Serial) {
+        delay(100);
+    }
+    Wire.begin();
+    sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
+
+    delay(100);
+    sensor.startH2oContinuousMeasurement();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 
+    float aFlow = 0.0;
+    float aTemperature = 0.0;
+    uint16_t aSignalingFlags = 0u;
+    delay(20);
+    sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
+   
+    Serial.print("aFlow: ");
+    Serial.print(aFlow);
+    Serial.print("\t");
+    Serial.print("aTemperature: ");
+    Serial.print(aTemperature);
+    Serial.print("\t");
+    Serial.print("aSignalingFlags: ");
+    Serial.print(aSignalingFlags);
+    Serial.println();
 }
