@@ -22,33 +22,33 @@ Pull-up resistors:
 SensirionI2cSf06Lf sensor;
 
 void setup() {
-
-    Serial.begin(9600);
-    while (!Serial) {
-        delay(100);
-    }
-    Wire.begin();
-    sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
-
+  
+  Serial.begin(9600);
+  while (!Serial) {
     delay(100);
-    sensor.startH2oContinuousMeasurement();
+  }
+  Wire.begin();
+  sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
+
+  delay(100);
+  sensor.startH2oContinuousMeasurement();
 }
 
 void loop() {
 
-    float aFlow = 0.0;
-    float aTemperature = 0.0;
-    uint16_t aSignalingFlags = 0u;
-    delay(20);
-    sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
+  float aFlow = 0.0;
+  float aTemperature = 0.0;    
+  uint16_t aSignalingFlags = 0u;
+  delay(20);
+  sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
    
-    Serial.print("aFlow: ");
-    Serial.print(aFlow);
-    Serial.print("\t");
-    Serial.print("aTemperature: ");
-    Serial.print(aTemperature);
-    Serial.print("\t");
-    Serial.print("aSignalingFlags: ");
-    Serial.print(aSignalingFlags);
-    Serial.println();
+  Serial.print("aFlow: ");
+  Serial.print(aFlow);
+  Serial.print("\t");
+  Serial.print("aTemperature: ");
+  Serial.print(aTemperature);
+  Serial.print("\t");
+  Serial.print("aSignalingFlags: ");
+  Serial.print(aSignalingFlags);
+  Serial.println();
 }
