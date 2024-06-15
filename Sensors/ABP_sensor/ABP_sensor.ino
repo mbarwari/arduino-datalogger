@@ -20,7 +20,7 @@ Reduce noise as per the datasheet:
 */
 
 // Define the analog input pin for the sensor
-const int pressureSensorPin = A0;
+const int pressureSensorPin = A2;
 
 // Sensor specifications
 const float Vsupply = 5.0;   // Supply voltage
@@ -32,7 +32,7 @@ const int decimalPlaces = 3; // Decimal places for Serial.print()
 
 
 void setup() {
-  analogReadResolution(14);  // Increase dafault 10-bit ADC resolution to 14-bit
+  //analogReadResolution(14);  // Increase dafault 10-bit ADC resolution to 14-bit
   Serial.begin(9600);        // Initialize serial communication
 }
 
@@ -52,7 +52,8 @@ void loop() {
   int averageSensorValue = total / sampleSize;
 
   // Convert the analog reading to voltage (0-5V)
-  float outputVoltage = averageSensorValue * (5.0 / 16383.0);
+  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
+  float outputVoltage = averageSensorValue * (5.0 / 1023.0);
 
   // Print the voltage to the serial monitor
   Serial.print(outputVoltage, decimalPlaces);
