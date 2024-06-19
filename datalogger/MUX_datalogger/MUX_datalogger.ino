@@ -1,5 +1,6 @@
 /*
-Datalogger program 
+MUX datalogger  
+Date: 6/18/2024
 */
 
 #include "WiFiS3.h"
@@ -35,40 +36,42 @@ int mux2_s3 = 2;
 int mux1_sig = 0;
 int mux2_sig = 1;
 
+/*
 String order[] = { 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ", 
-  "MUX 1 - Device         ",
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Inline tsensor ", 
-  "MUX 1 - Trio device    ",
-  "MUX 1 - Trio device    ", 
-  "MUX 1 - Trio device    ",
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - Trio waterblock", 
-  "MUX 2 - Trio waterblock", 
-  "MUX 2 - Trio waterblock", 
-  "MUX 2 - Trio waterblock",
-  "MUX 2 - Trio waterblock", 
-  "MUX 2 - Trio waterblock", 
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - Inline tsensor ", 
-  "MUX 2 - None           ", 
-  "MUX 2 - None           ",
-  "MUX 2 - None           ", 
-  "MUX 2 - None           "
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ",
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ", 
+  "MUX 1 - ",
+  "MUX 1 - ", 
+  "MUX 1 - ",
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ",
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ", 
+  "MUX 2 - ",
+  "MUX 2 - ", 
+  "MUX 2 - "
 };
+*/
 
 void setup() {
   pinMode(mux1_s0, OUTPUT);
@@ -123,50 +126,36 @@ void loop() {
 
     // Loop through and read all 16 values from mux 1
     for (int i = 0; i < 16; i++) {
-        float temp = readMux(i, 1);
+      float temp = readMux(i, 1);
 
-        /*
-        Serial.print(waqt);
-        Serial.print(" C");
-        Serial.print(i);
-        Serial.print(" ");
-        Serial.println(temp);
-        */
-
-        client.print(waqt);
-        client.print(" ");
-        client.print(order[i]);
-        client.print(" C");
-        client.print(i);
-        client.print(" ");
-        client.println(temp);
+      client.print(waqt);
+      client.print(" ");
+      //client.print(order[i]);
+      client.print("T");
+      client.print(i);
+      client.print(" ");
+      client.println(temp);
     }
 
     // Loop through and read all 16 values from mux 2
     for(int i = 0; i < 16; i ++){
-        float temp = readMux(i, 2);
-
-        /*
-        Serial.print(waqt);
-        Serial.print(" C");
-        Serial.print(i+16);
-        Serial.print(" ");
-        Serial.println(temp);
-        */
+      float temp = readMux(i, 2);
         
-        client.print(waqt);
-        client.print(" ");
-        client.print(order[i+16]);
-        client.print(" C");
-        client.print(i+16);
-        client.print(" ");
-        client.println(temp);
+      client.print(waqt);
+      client.print(" ");
+      //client.print(order[i+16]);
+      client.print("T");
+      client.print(i+16);
+      client.print(" ");
+      client.println(temp);
     }
 
   }
 
   delay(5000);
 }
+
+
 
 
 float readMux(int channel, int mux) {
@@ -218,20 +207,14 @@ float readMux(int channel, int mux) {
   uint16_t val[NUMSAMPLES] = { 0 };
   delay(50);
   for (j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
-    //Serial.println(val[j]);
-
     val[j] = analogRead(sig_pin);
-    //Serial.println(val[j]);
     delay(0);
   }
   float avgval = 0;
   for (int k = 0; k < NUMSAMPLES; k++) {
     avgval += val[k];
-    //Serial.println(avgval);
-    //Serial.println(avgval/NUMSAMPLES);
   }
   avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
-  //Serial.println(avgval);
   float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
   return steinhart;
 }
