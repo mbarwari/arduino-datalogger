@@ -1,10 +1,17 @@
 /*
 MUX datalogger  
-Date: 6/18/2024
+Date: 6/19/2024
+
+Temperature in Celsius 
+Pressure in PSI
+Flow rate in ml/min 
+
 */
 
+// include necessary libraries
 #include "WiFiS3.h"
 
+// thermistor related global variables and macros
 #define NUMSAMPLES 10
 #define SERIESRESISTOR 10000
 #define BCOEFFICIENT 3895
@@ -12,102 +19,82 @@ Date: 6/18/2024
 #define TEMPERATURENOMINAL 25
 unsigned long waqt;
 
+// WIFI related global variables, macros, and object
 #define SECRET_SSID "pigTrial"
 #define SECRET_PASS "123456789"
 char ssid[] = SECRET_SSID;  // your network SSID (name)
 char pass[] = SECRET_PASS;  // your network password (use for WPA, or use as key for WEP)
-int keyIndex = 0;           // your network key index number (needed only for WEP)
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
-// Mux1 control pins
+// MUX1 control pins (s0-s3)
 int mux1_s0 = 9;
 int mux1_s1 = 8;
 int mux1_s2 = 7;
 int mux1_s3 = 6;
 
-// Mux2 control pins
+// MUX2 control pins (s0-s3)
 int mux2_s0 = 5;
 int mux2_s1 = 4;
 int mux2_s2 = 3;
 int mux2_s3 = 2;
 
-// Mux in "SIG" pin
+// MUX1 and MUX2 signal pins (sig)
 int mux1_sig = 0;
 int mux2_sig = 1;
 
-/*
-String order[] = { 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ",
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ", 
-  "MUX 1 - ",
-  "MUX 1 - ", 
-  "MUX 1 - ",
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ",
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ", 
-  "MUX 2 - ",
-  "MUX 2 - ", 
-  "MUX 2 - "
-};
-*/
 
+// setup() function is called once when microcontroller starts 
 void setup() {
+
+  // set the control pins of MUX1 (s0-s3) to be output pins
+  // meaning the control pins will be used to select which one of the 16 channels to read from 
   pinMode(mux1_s0, OUTPUT);
   pinMode(mux1_s1, OUTPUT);
   pinMode(mux1_s2, OUTPUT);
   pinMode(mux1_s3, OUTPUT);
 
+  // set the initial state of MUX1 (s0-s3) control pins to LOW (0V)
+  // this initializes the multiplexer to connect to channel 0.
   digitalWrite(mux1_s0, LOW);
   digitalWrite(mux1_s1, LOW);
   digitalWrite(mux1_s2, LOW);
   digitalWrite(mux1_s3, LOW);
 
-  pinMode(mux2_s0, OUTPUT); 
-  pinMode(mux2_s1, OUTPUT); 
-  pinMode(mux2_s2, OUTPUT); 
-  pinMode(mux2_s3, OUTPUT); 
+  // set the control pins of MUX2 (s0-s3) to be output pins
+  // meaning the control pins will be used to select which one of the 16 channels to read from 
+  pinMode(mux2_s0, OUTPUT);
+  pinMode(mux2_s1, OUTPUT);
+  pinMode(mux2_s2, OUTPUT);
+  pinMode(mux2_s3, OUTPUT);
 
+  // set the initial state of MUX2 (s0-s3) control pins to LOW (0V)
+  // this initializes the multiplexer to connect to channel 0.  digitalWrite(mux2_s0, LOW);
   digitalWrite(mux2_s0, LOW);
   digitalWrite(mux2_s1, LOW);
   digitalWrite(mux2_s2, LOW);
   digitalWrite(mux2_s3, LOW);
 
+  // starts the serial communication at a baud rate of 9600 
   Serial.begin(9600);
-  
+
+  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy 
   analogReference(AR_EXTERNAL);
 
+  // call setWiFi() function which sets up the WiFi connection 
   setWiFi();
 
+  // start the WiFi server
+  // the server will listen for incoming connections on port 80 (the default port for HTTP)
   server.begin();
 }
 
+// loop() function runs continuously after the setup() function completes
 void loop() {
 
-  // compare the previous status to the current status
+  // compare previous WIFI status to current WIFI status 
   if (status != WiFi.status()) {
-    // it has changed update the variable
+    // WIFI status has changed so update status variable
     status = WiFi.status();
 
     if (status == WL_AP_CONNECTED) {
@@ -118,51 +105,49 @@ void loop() {
       Serial.println("Device disconnected from AP");
     }
   }
-  
-  WiFiClient client = server.available();   // listen for incoming clients
-  
-  if (client){      
-    // if you get a client
 
-    // Loop through and read all 16 values from mux 1
+  WiFiClient client = server.available();  // listen for incoming clients
+
+  if (client) {
+
+    // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
       float temp = readMux(i, 1);
 
       client.print(waqt);
       client.print(" ");
-      //client.print(order[i]);
       client.print("T");
       client.print(i);
       client.print(" ");
       client.println(temp);
     }
 
-    // Loop through and read all 16 values from mux 2
-    for(int i = 0; i < 16; i ++){
+    // Loop through and read, convert, and display all 16 channels from MUX 2
+    for (int i = 0; i < 16; i++) {
       float temp = readMux(i, 2);
-        
+
       client.print(waqt);
       client.print(" ");
-      //client.print(order[i+16]);
       client.print("T");
-      client.print(i+16);
+      client.print(i + 16);
       client.print(" ");
       client.println(temp);
     }
-
   }
 
+  // delay for 5 seconds
   delay(5000);
 }
 
 
-
-
 float readMux(int channel, int mux) {
 
+  // declare local array and variable for control pins (s0-s3) and sig pin
   int controlPin[4];
   int sig_pin;
 
+
+  // set the correct values for the control pins and sig pins for each MUX
   if (mux == 1) {
     controlPin[0] = mux1_s0;
     controlPin[1] = mux1_s1;
@@ -177,6 +162,8 @@ float readMux(int channel, int mux) {
     sig_pin = mux2_sig;
   }
 
+  // 2D integer array for MUX channels 
+  // arrayName[row][column]
   int muxChannel[16][4] = {
     { 0, 0, 0, 0 },  //channel 0
     { 1, 0, 0, 0 },  //channel 1
@@ -221,8 +208,6 @@ float readMux(int channel, int mux) {
 
 void setWiFi() {
 
-  Serial.println("Access Point Web Server");
-
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
@@ -253,19 +238,4 @@ void setWiFi() {
 
   // wait 10 seconds for connection:
   delay(10000);
-}
-
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print where to go in a browser:
-  Serial.print("To see this page in action, open a browser to http://");
-  Serial.println(ip);
 }
