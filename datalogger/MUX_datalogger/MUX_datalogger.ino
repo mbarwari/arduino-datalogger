@@ -27,19 +27,19 @@ char pass[] = SECRET_PASS;  // your network password (use for WPA, or use as key
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
-// MUX1 control pins (s0-s3)
+// MUX1 control pins, S0-S3 (digital pins)
 int mux1_s0 = 9;
 int mux1_s1 = 8;
 int mux1_s2 = 7;
 int mux1_s3 = 6;
 
-// MUX2 control pins (s0-s3)
+// MUX2 control pins, S0-S3 (digital pins)
 int mux2_s0 = 5;
 int mux2_s1 = 4;
 int mux2_s2 = 3;
 int mux2_s3 = 2;
 
-// MUX1 and MUX2 signal pins (sig)
+// MUX1 and MUX2 signal pins, SIG (analog pins)
 int mux1_sig = 0;
 int mux2_sig = 1;
 
@@ -47,28 +47,28 @@ int mux2_sig = 1;
 // setup() function is called once when microcontroller starts 
 void setup() {
 
-  // set the control pins of MUX1 (s0-s3) to be output pins
+  // set the control pins of MUX1 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from 
   pinMode(mux1_s0, OUTPUT);
   pinMode(mux1_s1, OUTPUT);
   pinMode(mux1_s2, OUTPUT);
   pinMode(mux1_s3, OUTPUT);
 
-  // set the initial state of MUX1 (s0-s3) control pins to LOW (0V)
+  // set the initial state of MUX1 (S0-S3) control pins to LOW (0V)
   // this initializes the multiplexer to connect to channel 0.
   digitalWrite(mux1_s0, LOW);
   digitalWrite(mux1_s1, LOW);
   digitalWrite(mux1_s2, LOW);
   digitalWrite(mux1_s3, LOW);
 
-  // set the control pins of MUX2 (s0-s3) to be output pins
+  // set the control pins of MUX2 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from 
   pinMode(mux2_s0, OUTPUT);
   pinMode(mux2_s1, OUTPUT);
   pinMode(mux2_s2, OUTPUT);
   pinMode(mux2_s3, OUTPUT);
 
-  // set the initial state of MUX2 (s0-s3) control pins to LOW (0V)
+  // set the initial state of MUX2 (S0-S3) control pins to LOW (0V)
   // this initializes the multiplexer to connect to channel 0.  digitalWrite(mux2_s0, LOW);
   digitalWrite(mux2_s0, LOW);
   digitalWrite(mux2_s1, LOW);
@@ -155,12 +155,11 @@ Return - (function return type: float)
 */
 float readMux(int channel, int mux) {
 
-  // declare local array for control pins (s0-s3) and variable for sig pin
+  // declare local array for control pins (S0-S3) and variable for SIG pin
   int controlPin[4];
   int sig_pin;
 
-
-  // set the correct values for each MUX's control pins and sig pins  
+  // set the correct values for each MUX's control pins and SIG pins  
   if (mux == 1) {
     controlPin[0] = mux1_s0;
     controlPin[1] = mux1_s1;
@@ -196,26 +195,27 @@ float readMux(int channel, int mux) {
     { 1, 1, 1, 1 }   //channel 15
   };
 
-  // loop through the 4 sig
+  // loop through the 4 SIG
   for (int i = 0; i < 4; i++) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
   // read the value at the SIG pin
-  uint8_t j = 0;
   waqt = millis() / 1000;
   uint16_t val[NUMSAMPLES] = { 0 };
   delay(50);
-  for (j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
+  for (uint8_t j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
     val[j] = analogRead(sig_pin);
     delay(0);
   }
+
   float avgval = 0;
   for (int k = 0; k < NUMSAMPLES; k++) {
     avgval += val[k];
   }
   avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
   float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
+  
   return steinhart;
 }
 
