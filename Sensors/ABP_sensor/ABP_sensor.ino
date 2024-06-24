@@ -42,7 +42,7 @@ void loop() {
 
   for (int i = 0; i < sampleSize; i++) {
     // Read the voltage from the pressure sensor
-    // analogRead() returns an integer between 0-16383
+    // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
     int sensorValue = analogRead(pressureSensorPin);
     total += sensorValue;
     delay(100);
