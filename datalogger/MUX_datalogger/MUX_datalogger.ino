@@ -81,8 +81,8 @@ void setup() {
   // sets the reference voltage for analog-to-digital conversion to an external source for accuracy 
   analogReference(AR_EXTERNAL);
 
-  // call setWiFi() function which sets up the WiFi connection 
-  setWiFi();
+  // call setupWiFiAP() function which sets up the WiFi Access Point 
+  setupWiFiAP();
 
   // start the WiFi server
   // the server will listen for incoming connections on port 80 (the default port for HTTP)
@@ -106,9 +106,11 @@ void loop() {
     }
   }
 
-  WiFiClient client = server.available();  // listen for incoming clients
+  // listen for incoming clients
+  WiFiClient client = server.available();  
 
   if (client) {
+    // if you get a client
 
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
@@ -133,10 +135,12 @@ void loop() {
       client.print(" ");
       client.println(temp);
     }
+
+    // delay for 5 seconds
+    delay(5000);
+
   }
 
-  // delay for 5 seconds
-  delay(5000);
 }
 
 
@@ -206,7 +210,7 @@ float readMux(int channel, int mux) {
   return steinhart;
 }
 
-void setWiFi() {
+void setupWiFiAP() {
 
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
@@ -215,6 +219,7 @@ void setWiFi() {
     while (true);
   }
 
+  // check firmware version
   String fv = WiFi.firmwareVersion();
   if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
     Serial.println("Please upgrade the firmware");
