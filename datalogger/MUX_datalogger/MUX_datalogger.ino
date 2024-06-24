@@ -3,13 +3,15 @@ MUX datalogger
 Date: 6/24/2024
 
 Temperature in Celsius 
-Pressure in PSI
 Flow rate in ml/min 
 
 */
 
 // include necessary libraries
 #include "WiFiS3.h"
+#include <SensirionI2cSf06Lf.h>
+
+SensirionI2cSf06Lf sensor;
 
 // thermistor related global variables and macros
 #define NUMSAMPLES 10
@@ -78,6 +80,15 @@ void setup() {
   // starts the serial communication at a baud rate of 9600 
   Serial.begin(9600);
 
+  while (!Serial) {
+    delay(100);
+  }
+  Wire.begin();
+  sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
+
+  delay(100);
+  sensor.startH2oContinuousMeasurement();
+
   // sets the reference voltage for analog-to-digital conversion to an external source for accuracy 
   analogReference(AR_EXTERNAL);
 
@@ -137,16 +148,32 @@ void loop() {
       client.println(temp);
     }
 
+    float aFlow = 0.0;
+    float aTemperature = 0.0;    
+    uint16_t aSignalingFlags = 0u;
+    delay(20);
+    sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
+    
+    client.print(waqt);
+    client.print(" ");
+    client.print("T32");
+    client.print(" ");
+    client.println(aTemperature);
+
+    client.print(waqt);
+    client.print(" ");
+    client.print("F1");
+    client.print(" ");
+    client.println(aFlow);
+
     // delay for 5 seconds
     delay(5000);
-
   }
-
 }
 
 
 /*
-readMux(int channel, int mux) - reads the MUX channel selected and converts resistance to thermistor temperature (using the Steinhart-Hart equation)
+readMux(int channel, int mux) - reads the MUX channel selected and converts thermistor value to temperature (using the Steinhart-Hart equation)
 Parameters - 
   int channel - represents which channel(0-15) to read from. int must be [0,15] for function to work properly.
   int mux - represents which MUX(1-2) to read from. int must be [1,2] for function to work properly.  
