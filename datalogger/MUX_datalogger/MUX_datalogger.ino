@@ -1,6 +1,6 @@
 /*
 MUX datalogger  
-Date: 6/19/2024
+Date: 6/24/2024
 
 Temperature in Celsius 
 Pressure in PSI
@@ -89,6 +89,7 @@ void setup() {
   server.begin();
 }
 
+
 // loop() function runs continuously after the setup() function completes
 void loop() {
 
@@ -144,14 +145,22 @@ void loop() {
 }
 
 
+/*
+readMux(int channel, int mux) - reads the MUX channel selected and converts resistance to thermistor temperature (using the Steinhart-Hart equation)
+Parameters - 
+  int channel - represents which channel(0-15) to read from. int must be [0,15] for function to work properly.
+  int mux - represents which MUX(1-2) to read from. int must be [1,2] for function to work properly.  
+Return - (function return type: float)
+  float steinhart - temperature in celsius of the thermistor  
+*/
 float readMux(int channel, int mux) {
 
-  // declare local array and variable for control pins (s0-s3) and sig pin
+  // declare local array for control pins (s0-s3) and variable for sig pin
   int controlPin[4];
   int sig_pin;
 
 
-  // set the correct values for the control pins and sig pins for each MUX
+  // set the correct values for each MUX's control pins and sig pins  
   if (mux == 1) {
     controlPin[0] = mux1_s0;
     controlPin[1] = mux1_s1;
@@ -210,6 +219,12 @@ float readMux(int channel, int mux) {
   return steinhart;
 }
 
+
+/*
+setupWiFiAP() - sets up the WiFi Access Point and includes error handling 
+Parameters -  none (uses global variable status)
+Return - none (function return type: void)
+*/
 void setupWiFiAP() {
 
   // check for the WiFi module:
@@ -244,3 +259,4 @@ void setupWiFiAP() {
   // wait 10 seconds for connection:
   delay(10000);
 }
+
