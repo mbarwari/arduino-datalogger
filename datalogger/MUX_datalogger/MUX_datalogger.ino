@@ -1,9 +1,10 @@
 /*
 MUX datalogger  
-Date: 6/24/2024
+Date: 7/2/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
+Pressure in PSI 
 
 */
 
@@ -12,6 +13,13 @@ Flow rate in ml/min
 #include <SensirionI2cSf06Lf.h>
 
 SensirionI2cSf06Lf sensor;
+
+// Sensor specifications
+const float Vsupply = 5.0;   // Supply voltage
+const float Pmin = 0;        // Minimum pressure in PSI
+const float Pmax = 15;       // Maximum pressure in PSI
+
+const int decimalPlaces = 3; // Decimal places for Serial.print() 
 
 // thermistor related global variables and macros
 #define NUMSAMPLES 10
@@ -124,28 +132,49 @@ void loop() {
   if (client) {
     // if you get a client
 
+    int tempCount = 0; 
+    int pressureCount = 0; 
+    int flowCount = 0; 
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
-      float temp = readMux(i, 1);
+      tempCount += 1;
+      int sig = setMux(1, i);
+      float temp = readThermistor(sig);
 
       client.print(waqt);
       client.print(" ");
       client.print("T");
-      client.print(i);
+      client.print(tempCount);
       client.print(" ");
       client.println(temp);
     }
-
+    
     // Loop through and read, convert, and display all 16 channels from MUX 2
     for (int i = 0; i < 16; i++) {
-      float temp = readMux(i, 2);
+      if(i < 12){
+        tempCount += 1;
+        int sig = setMux(2, i);
+        float temp = readThermistor(sig);
 
-      client.print(waqt);
-      client.print(" ");
-      client.print("T");
-      client.print(i + 16);
-      client.print(" ");
-      client.println(temp);
+        client.print(waqt);
+        client.print(" ");
+        client.print("T");
+        client.print(tempCount);
+        client.print(" ");
+        client.println(temp);
+      }
+      else{
+        pressureCount += 1;
+        int sig = setMux(2, i);
+        float pressure = readPressure(sig);
+        
+        client.print(waqt);
+        client.print(" ");
+        client.print("P");
+        client.print(pressureCount);
+        client.print(" ");
+        client.println(pressure);
+      }
     }
 
     float aFlow = 0.0;
@@ -153,16 +182,20 @@ void loop() {
     uint16_t aSignalingFlags = 0u;
     delay(20);
     sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
-    
+
+    tempCount += 1;
     client.print(waqt);
     client.print(" ");
-    client.print("T32");
+    client.print("T");
+    client.print(tempCount);
     client.print(" ");
     client.println(aTemperature);
 
+    flowCount += 1;
     client.print(waqt);
     client.print(" ");
-    client.print("F1");
+    client.print("F");
+    client.print(flowCount);
     client.print(" ");
     client.println(aFlow);
 
@@ -172,15 +205,72 @@ void loop() {
 }
 
 
+//todo 
+float readPressure(int sig_pin) {
+  
+  delay(50);
+  
+  int sensorValue = analogRead(sig_pin);
+  Serial.print(sensorValue, decimalPlaces);
+
+  // Convert the analog reading to voltage (0-5V)
+  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
+  float outputVoltage = sensorValue * (5.0 / 1023.0);
+
+  // Print the voltage to the serial monitor
+  Serial.print(" ");
+  Serial.print(outputVoltage, decimalPlaces);
+
+  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
+  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+
+  // Print the pressure to the serial monitor
+  Serial.print(" ");
+  Serial.println(pressureApplied, decimalPlaces);
+
+  return pressureApplied; 
+}
+//todo 
+
+
 /*
-readMux(int channel, int mux) - reads the MUX channel selected and converts thermistor value to temperature (using the Steinhart-Hart equation)
+readThermistor(int sig_pin) - converts thermistor value to temperature using the Steinhart-Hart equation
 Parameters - 
-  int channel - represents which channel(0-15) to read from. int must be [0,15] for function to work properly.
-  int mux - represents which MUX(1-2) to read from. int must be [1,2] for function to work properly.  
-Return - (function return type: float)
+  int sig_pin -   
+Return - (function return type: int)
   float steinhart - temperature in celsius of the thermistor  
 */
-float readMux(int channel, int mux) {
+float readThermistor(int sig_pin){
+  
+  // read the value at the SIG pin
+  waqt = millis() / 1000;
+  uint16_t val[NUMSAMPLES] = { 0 };
+  delay(50);
+  for (uint8_t j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
+    val[j] = analogRead(sig_pin);
+    delay(0);
+  }
+
+  float avgval = 0;
+  for (int k = 0; k < NUMSAMPLES; k++) {
+    avgval += val[k];
+  }
+  avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
+  float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
+  
+  return steinhart;
+}
+
+
+/*
+setMux(int mux, int channel) - sets the MUX channel based off the parameters  
+Parameters - 
+  int mux - represents which MUX(1-2) to read from. int must be [1,2] for function to work properly.  
+  int channel - represents which channel(0-15) to read from. int must be [0,15] for function to work properly.
+Return - (function return type: int)
+  int sig_pin -  
+*/
+int setMux(int mux, int channel) {
 
   // declare local array for control pins (S0-S3) and variable for SIG pin
   int controlPin[4];
@@ -227,23 +317,7 @@ float readMux(int channel, int mux) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
-  // read the value at the SIG pin
-  waqt = millis() / 1000;
-  uint16_t val[NUMSAMPLES] = { 0 };
-  delay(50);
-  for (uint8_t j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
-    val[j] = analogRead(sig_pin);
-    delay(0);
-  }
-
-  float avgval = 0;
-  for (int k = 0; k < NUMSAMPLES; k++) {
-    avgval += val[k];
-  }
-  avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
-  float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
-  
-  return steinhart;
+  return sig_pin; 
 }
 
 
