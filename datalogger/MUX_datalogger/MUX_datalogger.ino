@@ -15,11 +15,11 @@ Pressure in PSI
 SensirionI2cSf06Lf sensor;
 
 // Sensor specifications
-const float Vsupply = 5.0;   // Supply voltage
-const float Pmin = 0;        // Minimum pressure in PSI
-const float Pmax = 15;       // Maximum pressure in PSI
+const float Vsupply = 5.0;  // Supply voltage
+const float Pmin = 0;       // Minimum pressure in PSI
+const float Pmax = 15;      // Maximum pressure in PSI
 
-const int decimalPlaces = 3; // Decimal places for Serial.print() 
+const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
 // thermistor related global variables and macros
 #define NUMSAMPLES 10
@@ -54,11 +54,11 @@ int mux1_sig = 0;
 int mux2_sig = 1;
 
 
-// setup() function is called once when microcontroller starts 
+// setup() function is called once when microcontroller starts
 void setup() {
 
   // set the control pins of MUX1 (S0-S3) to be output pins
-  // meaning the control pins will be used to select which one of the 16 channels to read from 
+  // meaning the control pins will be used to select which one of the 16 channels to read from
   pinMode(mux1_s0, OUTPUT);
   pinMode(mux1_s1, OUTPUT);
   pinMode(mux1_s2, OUTPUT);
@@ -72,7 +72,7 @@ void setup() {
   digitalWrite(mux1_s3, LOW);
 
   // set the control pins of MUX2 (S0-S3) to be output pins
-  // meaning the control pins will be used to select which one of the 16 channels to read from 
+  // meaning the control pins will be used to select which one of the 16 channels to read from
   pinMode(mux2_s0, OUTPUT);
   pinMode(mux2_s1, OUTPUT);
   pinMode(mux2_s2, OUTPUT);
@@ -85,7 +85,7 @@ void setup() {
   digitalWrite(mux2_s2, LOW);
   digitalWrite(mux2_s3, LOW);
 
-  // starts the serial communication at a baud rate of 9600 
+  // starts the serial communication at a baud rate of 9600
   Serial.begin(9600);
 
   while (!Serial) {
@@ -97,10 +97,10 @@ void setup() {
   delay(100);
   sensor.startH2oContinuousMeasurement();
 
-  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy 
+  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy
   analogReference(AR_EXTERNAL);
 
-  // call setupWiFiAP() function which sets up the WiFi Access Point 
+  // call setupWiFiAP() function which sets up the WiFi Access Point
   setupWiFiAP();
 
   // start the WiFi server
@@ -112,7 +112,7 @@ void setup() {
 // loop() function runs continuously after the setup() function completes
 void loop() {
 
-  // compare previous WIFI status to current WIFI status 
+  // compare previous WIFI status to current WIFI status
   if (status != WiFi.status()) {
     // WIFI status has changed so update status variable
     status = WiFi.status();
@@ -127,14 +127,14 @@ void loop() {
   }
 
   // listen for incoming clients
-  WiFiClient client = server.available();  
+  WiFiClient client = server.available();
 
   if (client) {
     // if you get a client
 
-    int tempCount = 0; 
-    int pressureCount = 0; 
-    int flowCount = 0; 
+    int tempCount = 0;
+    int pressureCount = 0;
+    int flowCount = 0;
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
       tempCount += 1;
@@ -148,10 +148,10 @@ void loop() {
       client.print(" ");
       client.println(temp);
     }
-    
+
     // Loop through and read, convert, and display all 16 channels from MUX 2
     for (int i = 0; i < 16; i++) {
-      if(i < 12){
+      if (i < 12) {
         tempCount += 1;
         int sig = setMux(2, i);
         float temp = readThermistor(sig);
@@ -162,12 +162,11 @@ void loop() {
         client.print(tempCount);
         client.print(" ");
         client.println(temp);
-      }
-      else{
+      } else {
         pressureCount += 1;
         int sig = setMux(2, i);
         float pressure = readPressure(sig);
-        
+
         client.print(waqt);
         client.print(" ");
         client.print("P");
@@ -178,7 +177,7 @@ void loop() {
     }
 
     float aFlow = 0.0;
-    float aTemperature = 0.0;    
+    float aTemperature = 0.0;
     uint16_t aSignalingFlags = 0u;
     delay(20);
     sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
@@ -205,11 +204,11 @@ void loop() {
 }
 
 
-//todo 
+//todo
 float readPressure(int sig_pin) {
-  
+
   delay(50);
-  
+
   int sensorValue = analogRead(sig_pin);
   Serial.print(sensorValue, decimalPlaces);
 
@@ -228,9 +227,9 @@ float readPressure(int sig_pin) {
   Serial.print(" ");
   Serial.println(pressureApplied, decimalPlaces);
 
-  return pressureApplied; 
+  return pressureApplied;
 }
-//todo 
+//todo
 
 
 /*
@@ -240,8 +239,8 @@ Parameters -
 Return - (function return type: int)
   float steinhart - temperature in celsius of the thermistor  
 */
-float readThermistor(int sig_pin){
-  
+float readThermistor(int sig_pin) {
+
   // read the value at the SIG pin
   waqt = millis() / 1000;
   uint16_t val[NUMSAMPLES] = { 0 };
@@ -257,7 +256,7 @@ float readThermistor(int sig_pin){
   }
   avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
   float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
-  
+
   return steinhart;
 }
 
@@ -276,7 +275,7 @@ int setMux(int mux, int channel) {
   int controlPin[4];
   int sig_pin;
 
-  // set the correct values for each MUX's control pins and SIG pins  
+  // set the correct values for each MUX's control pins and SIG pins
   if (mux == 1) {
     controlPin[0] = mux1_s0;
     controlPin[1] = mux1_s1;
@@ -291,7 +290,7 @@ int setMux(int mux, int channel) {
     sig_pin = mux2_sig;
   }
 
-  // 2D integer array for MUX channels 
+  // 2D integer array for MUX channels
   // arrayName[row][column]
   int muxChannel[16][4] = {
     { 0, 0, 0, 0 },  //channel 0
@@ -317,7 +316,7 @@ int setMux(int mux, int channel) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
-  return sig_pin; 
+  return sig_pin;
 }
 
 
@@ -332,7 +331,8 @@ void setupWiFiAP() {
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
-    while (true);
+    while (true)
+      ;
   }
 
   // check firmware version
@@ -354,10 +354,10 @@ void setupWiFiAP() {
   if (status != WL_AP_LISTENING) {
     Serial.println("Creating access point failed");
     // don't continue
-    while (true);
+    while (true)
+      ;
   }
 
   // wait 10 seconds for connection:
   delay(10000);
 }
-
