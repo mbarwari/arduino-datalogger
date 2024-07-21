@@ -1,6 +1,6 @@
 /*
 MUX datalogger  
-Date: 7/19/2024
+Date: 7/20/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
@@ -13,7 +13,6 @@ Pressure in PSI
 #include <Arduino.h>
 #include <SensirionI2cSf06Lf.h>
 
-//todo
 // Digital pins for the IRQn pins of the sensors to connect to
 #define IRQN_PIN_SENSOR_A 13
 #define IRQN_PIN_SENSOR_B 12
@@ -29,15 +28,16 @@ SensirionI2cSf06Lf sensorA;
 SensirionI2cSf06Lf sensorB;
 SensirionI2cSf06Lf sensorC;
 
-// Error message for flow sensor 
+//todo
+// Error message for flow sensor
 static char errorMessage[64];
 static int16_t error;
 //todo
 
 // Sensor specifications
-const float Vsupply = 5.0;    // Supply voltage
-const float Pmin = 0.0;       // Minimum pressure in PSI
-const float Pmax = 15.0;      // Maximum pressure in PSI
+const float Vsupply = 5.0;  // Supply voltage
+const float Pmin = 0.0;     // Minimum pressure in PSI
+const float Pmax = 15.0;    // Maximum pressure in PSI
 
 const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
@@ -48,9 +48,9 @@ const int decimalPlaces = 3;  // Decimal places for Serial.print()
 #define THERMISTORNOMINAL 10000
 #define TEMPERATURENOMINAL 25
 
-// general 
+// general
 unsigned long waqt;
-int tempCount, pressureCount, flowCount;
+int tempCount, pressureCount, flowCount, ncCount;
 
 // WIFI related global variables, macros, and object
 #define SECRET_SSID "pigTrial"
@@ -111,15 +111,16 @@ void setup() {
   // starts the serial communication at a baud rate of 9600
   Serial.begin(9600);
   while (!Serial) {
-    delay(100); 
+    delay(100);
   }
 
-  flowSensorSetUp(); 
+  // change the flow sensor I2C addresses and ......
+  flowSensorSetUp();
 
-  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy
+  // set the reference voltage for analog-to-digital conversion to an external source for accuracy
   analogReference(AR_EXTERNAL);
 
-  // call setupWiFiAP() function which sets up the WiFi Access Point
+  // set up the WiFi Access Point
   setupWiFiAP();
 
   // start the WiFi server
@@ -154,6 +155,7 @@ void loop() {
     tempCount = 0;
     pressureCount = 0;
     flowCount = 0;
+    ncCount = 0;
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
       tempCount += 1;
@@ -171,6 +173,8 @@ void loop() {
     // Loop through and read, convert, and display all 16 channels from MUX 2
     for (int i = 0; i < 16; i++) {
       if (i < 12) {
+        // MUX channels 0-11 have thermistors connected so
+        // read, convert, and display the temperature (in Celsius) from the thermistors
         tempCount += 1;
         int sig = setMux(2, i);
         float temp = readThermistor(sig);
@@ -181,7 +185,9 @@ void loop() {
         client.print(tempCount);
         client.print(" ");
         client.println(temp);
-      } else {
+      } else if (i < 15) {
+        // MUX channels 12-14 have pressure sensors connected so
+        // read, convert, and display the pressure (in PSI) from the pressure sensors
         pressureCount += 1;
         int sig = setMux(2, i);
         float pressure = readPressure(sig);
@@ -192,11 +198,20 @@ void loop() {
         client.print(pressureCount);
         client.print(" ");
         client.println(pressure);
+      } else {
+        // last MUX channel (C15) is not connected
+        ncCount += 1;
+
+        client.print(waqt);
+        client.print(" ");
+        client.print("NC");
+        client.println(ncCount);
       }
     }
 
+    // read and display the flow rate (in ml/min) from the flow sensors
     printFlowSensorOutput(sensorA, client);
-    printFlowSensorOutput(sensorB, client);  
+    printFlowSensorOutput(sensorB, client);
     printFlowSensorOutput(sensorC, client);
 
     // delay for 5 seconds
@@ -204,8 +219,46 @@ void loop() {
   }
 }
 
+
+
 //todo
-void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client){
+float readPressure(int sig_pin) {
+
+  delay(50);
+
+  int sensorValue = analogRead(sig_pin);
+  Serial.print(sensorValue);
+
+  // Convert the analog reading to voltage (0-5V)
+  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
+  float outputVoltage = sensorValue * (5.0 / 1023.0);
+
+  // Print the voltage to the serial monitor
+  Serial.print(" ");
+  Serial.print(outputVoltage, decimalPlaces);
+
+  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
+  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+
+  // Print the pressure to the serial monitor
+  Serial.print(" ");
+  Serial.println(pressureApplied, decimalPlaces);
+
+  return pressureApplied;
+}
+//todo
+
+
+
+
+/*
+printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) - 
+Parameters - 
+  SensirionI2cSf06Lf& sensor
+  WiFiClient& client
+Return - none (function return type: void) 
+*/
+void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) {
   float aFlow = 0.0;
   float aTemperature = 0.0;
   uint16_t aSignalingFlags = 0u;
@@ -229,7 +282,14 @@ void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client){
   client.println(aFlow);
 }
 
-void flowSensorSetUp(){
+
+/*
+IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
+flowSensorSetUp()
+Parameters - none
+Return - none (function return type: void) 
+*/
+void flowSensorSetUp() {
   error = NO_ERROR;
 
   Wire.begin();
@@ -311,14 +371,31 @@ void flowSensorSetUp(){
   }
 }
 
+
+/*
+IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
+i2c_soft_reset()   
+Parameters - none 
+Return - none (function return type: void) 
+*/
 void i2c_soft_reset() {
   Wire.beginTransmission(0x00);
   size_t writtenBytes = Wire.write(0x06);
   uint8_t i2c_error = Wire.endTransmission();
 }
 
+
+/*
+IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
+changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t sensorIrqPin)
+Parameters - 
+  TwoWire& wire
+  uint16_t newI2cAddress 
+  uint8_t sensorIrqPin
+Return - NO_ERROR (function return type: int16_t) 
+*/
 int16_t changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t sensorIrqPin) {
-  uint8_t communication_buffer[5] = {0};
+  uint8_t communication_buffer[5] = { 0 };
   int16_t localError = NO_ERROR;
   uint8_t* buffer_ptr = communication_buffer;
 
@@ -369,35 +446,6 @@ int16_t changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t senso
   Serial.println(newI2cAddress, HEX);
   return NO_ERROR;
 }
-//todo
-
-
-//todo
-float readPressure(int sig_pin) {
-
-  delay(50);
-
-  int sensorValue = analogRead(sig_pin);
-  Serial.print(sensorValue, decimalPlaces);
-
-  // Convert the analog reading to voltage (0-5V)
-  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
-  float outputVoltage = sensorValue * (5.0 / 1023.0);
-
-  // Print the voltage to the serial monitor
-  Serial.print(" ");
-  Serial.print(outputVoltage, decimalPlaces);
-
-  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
-  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
-
-  // Print the pressure to the serial monitor
-  Serial.print(" ");
-  Serial.println(pressureApplied, decimalPlaces);
-
-  return pressureApplied;
-}
-//todo
 
 
 /*
