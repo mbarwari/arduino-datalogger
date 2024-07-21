@@ -1,6 +1,6 @@
 /*
 MUX datalogger  
-Date: 7/20/2024
+Date: 7/21/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
@@ -28,27 +28,26 @@ SensirionI2cSf06Lf sensorA;
 SensirionI2cSf06Lf sensorB;
 SensirionI2cSf06Lf sensorC;
 
-//todo
 // Error message for flow sensor
 static char errorMessage[64];
 static int16_t error;
-//todo
 
-// Sensor specifications
+// Pressure sensor specifications
 const float Vsupply = 5.0;  // Supply voltage
 const float Pmin = 0.0;     // Minimum pressure in PSI
 const float Pmax = 15.0;    // Maximum pressure in PSI
 
+const int sampleSize = 10;   // Sample size
 const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
-// thermistor related global variables and macros
+// Thermistor related global variables and macros
 #define NUMSAMPLES 10
 #define SERIESRESISTOR 10000
 #define BCOEFFICIENT 3895
 #define THERMISTORNOMINAL 10000
 #define TEMPERATURENOMINAL 25
 
-// general
+// General variables
 unsigned long waqt;
 int tempCount, pressureCount, flowCount, ncCount;
 
@@ -220,35 +219,37 @@ void loop() {
 }
 
 
-
-//todo
+/*
+readPressure(int sig_pin) -  
+Parameters - 
+  int sig_pin
+Return - pressureApplied (function return type: float) 
+*/
 float readPressure(int sig_pin) {
-
   delay(50);
+  int total = 0;
 
-  int sensorValue = analogRead(sig_pin);
-  Serial.print(sensorValue);
+  for (int i = 0; i < sampleSize; i++) {
+    // Read the voltage from the pressure sensor
+    // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
+    int sensorValue = analogRead(sig_pin);
+    total += sensorValue;
+    delay(0);
+  }
+
+  // Find the average of the sensor value readings 
+  int averageSensorValue = total / sampleSize;
 
   // Convert the analog reading to voltage (0-5V)
   //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
-  float outputVoltage = sensorValue * (5.0 / 1023.0);
-
-  // Print the voltage to the serial monitor
-  Serial.print(" ");
-  Serial.print(outputVoltage, decimalPlaces);
+  //float outputVoltage = averageSensorValue * (5.0 / 1023.0);
+  float outputVoltage = averageSensorValue * (3.2 / 1023.0);
 
   // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
   float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
 
-  // Print the pressure to the serial monitor
-  Serial.print(" ");
-  Serial.println(pressureApplied, decimalPlaces);
-
   return pressureApplied;
 }
-//todo
-
-
 
 
 /*
