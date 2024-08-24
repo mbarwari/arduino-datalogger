@@ -1,7 +1,7 @@
 #define DACPIN A0
 #define THERMISTORPIN1 A1
 #define THERMISTORPIN2 A2
-#define THERMISTORPIN3 A3
+//#define THERMISTORPIN3 A3
 #define THERMISTORNOMINAL 10000  
 #define TEMPERATURENOMINAL 25 
 #define NUMSAMPLES 10
@@ -29,56 +29,78 @@ SensirionI2cSf06Lf flow_sensor;
 PwmOut pwm(D5);
 
 Adafruit_INA260 ina260_peltier = Adafruit_INA260();
+Adafruit_INA260 ina260_waterpump = Adafruit_INA260();
 
 //Creating the output frequency using the DAC pin
 //#include "analogWave.h" // Include the library for analog waveform generation
 //analogWave wave(DAC);   // Create an instance of the analogWave class, using the DAC pin
 int freq = 10;  // in hertz, change accordingly, randomly set at 0 here, can increase below
 
-#include <PID_v1.h> //Initializing the PID loop
+//PID Loop creation and variables
+  #include <PID_v1.h> //Initializing the PID loop
 
-double SetpointPeltier, InputPeltierPID, OutputPeltierPID; //Generating the input variables for the peltier plate cooling PID -- Setpoint is goal; input is what is detected; output is PID output 0-255
-double Kp_peltier=17, Ki_peltier=3, Kd_peltier=2; //Specify the initial tuning parameters. Ignoring Kd since not used often. -- watch youtube video: https://www.youtube.com/watch?v=IB1Ir4oCP5k
-PID myPID_peltier(&InputPeltierPID, &OutputPeltierPID, &SetpointPeltier, Kp_peltier, Ki_peltier, Kd_peltier, DIRECT, REVERSE); //By default, PID "warms" up, so we have to reverse it -- unknown what DIRECT is for
+  double SetpointPeltier, InputPeltierPID, OutputPeltierPID; //Generating the input variables for the peltier plate cooling PID -- Setpoint is goal; input is what is detected; output is PID output 0-255
+  double Kp_peltier=17, Ki_peltier=3, Kd_peltier=2; //Specify the initial tuning parameters. Ignoring Kd since not used often. -- watch youtube video: https://www.youtube.com/watch?v=IB1Ir4oCP5k
+  PID myPID_peltier(&InputPeltierPID, &OutputPeltierPID, &SetpointPeltier, Kp_peltier, Ki_peltier, Kd_peltier, DIRECT, REVERSE); //By default, PID "warms" up, so we have to reverse it -- unknown what DIRECT is for
 
-//This PID is to make sure that the water block is adequtely cooling down. WB stands for water block
-double SetpointWB, InputWB, OutputWB; // setpoint is desired temp, input is current temp, output is 0-255
-double Kp_WB=15, Ki_WB=10, Kd_WB=0;
-PID myPID_WB(&InputWB, &OutputWB, &SetpointWB, Kp_WB, Ki_WB, Kd_WB, DIRECT, REVERSE);
+  //This PID is to make sure that the water block is adequtely cooling down. WB stands for water block
+  double SetpointWB, InputWB, OutputWB; // setpoint is desired temp, input is current temp, output is 0-255
+  double Kp_WB=15, Ki_WB=10, Kd_WB=0;
+  PID myPID_WB(&InputWB, &OutputWB, &SetpointWB, Kp_WB, Ki_WB, Kd_WB, DIRECT, REVERSE);
 
 
-//These are parameters that can be adjusted for temperature cutoffs -- TempIdeals are equivalent to Setpoint
-int BrainTempIdeal = 10; //Ideal brain temperature, currently 12 for testing purposes (should be 25)
-int WBTempMax = 26; //The maximum peltier plate temperature, currently 25 for testing purposes (should be 40)
-int WBTempIdeal = 20; //The ideal temperature of the WB, currently 22 for testing purposes (should be 35)
+  //These are parameters that can be adjusted for temperature cutoffs -- TempIdeals are equivalent to Setpoint
+  int BrainTempIdeal = 10; //Ideal brain temperature, currently 12 for testing purposes (should be 25)
+  int WBTempMax = 26; //The maximum peltier plate temperature, currently 25 for testing purposes (should be 40)
+  int WBTempIdeal = 20; //The ideal temperature of the WB, currently 22 for testing purposes (should be 35)
 
 unsigned long waqt;
 uint16_t samplesa1[NUMSAMPLES];
 uint16_t samplesa2[NUMSAMPLES];
 uint16_t samplesa3[NUMSAMPLES];
 
+//Pressure Sensor information
+
+  // Define the analog input pin for the sensor
+  const int pressureSensorPin = A3;
+
+  // Sensor specifications
+  const float Vsupply = 5.0;    // Supply voltage
+  const float Pmin = 0.0;       // Minimum pressure in PSI
+  const float Pmax = 15.0;      // Maximum pressure in PSI
+
+  const int sampleSize = 10;   // Sample size
+  const int decimalPlaces = 3;  // Decimal places for Serial.print()
+
 
 
 void setup() {
-  // put your setup code here, to run once:
+// put your setup code here, to run once:
 
-  Serial.begin(115200);
- while (!Serial) { delay(10); }
+Serial.begin(115200);
+
+//Starting up INA Chips and Detecting them
+    while (!Serial) { delay(10); }
   Wire.begin();
- pwm.begin(100.0f, 50.0f);
   Serial.println("Adafruit INA260 Test");
-
-  if (!ina260_peltier.begin()) {
-    Serial.println("Couldn't find INA260 chip");
+ if (!ina260_peltier.begin(0x40)) {
+    Serial.print("Couldn't find INA260_peltier chip at 0x40");
     while (1);
-  } 
+}
+if (!ina260_waterpump.begin(0x41)) {
+    Serial.print("Couldn't find INA260_waterpump chip at 0x41");
+    while (1);
+}
+  Serial.println("Found INA260 chips");
 
-  Serial.println("Found INA260 chip");
+
+pwm.begin(100.0f, 50.0f);
   //analogReference(EXTERNAL);
-  analogReference(AR_EXTERNAL); //This needs to be wired to AREF at 3.3V, and this is the powersupply to the thermestimors
-  pinMode(DACPIN, OUTPUT);
+analogReference(AR_EXTERNAL); //This needs to be wired to AREF at 3.3V, and this is the powersupply to the thermestimors
+pinMode(DACPIN, OUTPUT);
   //wave.square(freq);
   
+//Turning on PID loops
 
   SetpointPeltier = BrainTempIdeal;
   //turn the PID on
@@ -88,24 +110,24 @@ void setup() {
   SetpointWB = WBTempIdeal;
   myPID_WB.SetMode(AUTOMATIC);
 
+
 //Initializing flow sensor
   flow_sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
-
   delay(100);
   flow_sensor.startH2oContinuousMeasurement();
-
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-uint8_t i;
-  waqt = millis()/1000;
-   for (i=0; i< NUMSAMPLES; i++) {          // take N samples in a row, with a slight delay
-   samplesa1[i] = analogRead(THERMISTORPIN1);
-   samplesa2[i] = analogRead(THERMISTORPIN2);
-   //samplesa3[i] = analogRead(THERMISTORPIN3);
-   delay(100);
+//Getting temperatures
+  uint8_t i;
+    waqt = millis()/1000;
+      for (i=0; i< NUMSAMPLES; i++) {          // take N samples in a row, with a slight delay
+      samplesa1[i] = analogRead(THERMISTORPIN1);
+      samplesa2[i] = analogRead(THERMISTORPIN2);
+      //samplesa3[i] = analogRead(THERMISTORPIN3);
+    delay(100);
   }
   
   float avga1;
@@ -174,11 +196,9 @@ uint8_t i;
   myPID_peltier.Compute();
   //OutputPeltierPID = 0;
 
-if (Serial.available()>0) {
-
-//stringa = Serial.readString();
-//CompSetPeltier = stringa.toInt();
-
+  if (Serial.available()>0) {
+  //stringa = Serial.readString();
+  //CompSetPeltier = stringa.toInt();
 }
 
   analogWrite(DACPIN, 255-OutputPeltierPID);
@@ -190,23 +210,21 @@ if (Serial.available()>0) {
   
 
 
-float WBTemp_atm;
-WBTemp_atm = steinharta2;
+//PID Loop control for Water Pumps
+  float WBTemp_atm;
+  WBTemp_atm = steinharta2;
 
-
-if (WBTemp_atm >= WBTempIdeal) {
- InputWB = WBTemp_atm;
- myPID_WB.Compute();
- freq = (OutputWB * (60)) / 255;
- Serial.print("WB_OUT(div10):");
- Serial.print(OutputWB/10);
- pwm.period_raw(50000000/freq); ///50000000 might need some adjustmnet, it is rough ballpark
- pwm.pulse_perc(50.0f);
- Serial.print("\t");
- Serial.print("FREQ:");
- Serial.print(freq);
-
-
+  if (WBTemp_atm >= WBTempIdeal) {
+    InputWB = WBTemp_atm;
+    myPID_WB.Compute();
+    freq = (OutputWB * (60)) / 255;
+    Serial.print("WB_OUT(div10):");
+    Serial.print(OutputWB/10);
+    pwm.period_raw(50000000/freq); ///50000000 might need some adjustmnet, it is rough ballpark
+    pwm.pulse_perc(50.0f);
+    Serial.print("\t");
+    Serial.print("FREQ:");
+    Serial.print(freq);
 }
 /*else {freq = 0;
 
@@ -219,19 +237,16 @@ Serial.print("WB_OUT(div10):");
  Serial.print(freq); */
 
 
+//Peltier Current and Voltage Sensing
+  float peltier_current;
+  peltier_current = ina260_peltier.readCurrent()/1000;
 
-float peltier_current;
-peltier_current = ina260_peltier.readCurrent()/1000;
-
-
-if (peltier_current >= 2) {
-
-OutputPeltierPID = 0;
-
-}
+  if (peltier_current >= 2) {
+  OutputPeltierPID = 0;
+  }
 
 
- Serial.print("\t");
+  Serial.print("\t");
   Serial.print("P_Curr:");
   Serial.print(peltier_current);
  
@@ -240,19 +255,56 @@ OutputPeltierPID = 0;
   Serial.print("P_Volt");
   Serial.print(ina260_peltier.readBusVoltage()/1000);
 
- //Getting info from flow sensor
+//Water Pump Voltage and Current Sensing
+  Serial.print("\t");
+  Serial.print("WP_Curr:");
+  Serial.print(ina260_waterpump.readCurrent()/1000);
+
+  Serial.print("\t");
+  Serial.print("WP_Volt");
+  Serial.print(ina260_waterpump.readBusVoltage()/1000);
+
+
+//Getting info from flow sensor
  float aFlow = 0.0;
   float aTemperature = 0.0;    
   uint16_t aSignalingFlags = 0u;
  flow_sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3S_4000B, aFlow, aTemperature, aSignalingFlags);
   Serial.print("\t");
   Serial.print("aFlow: ");
-  Serial.println(aFlow);
-   Serial.print("aTemperature: ");
+  Serial.print(aFlow);
+  Serial.print("aTemperature: ");
   Serial.print(aTemperature);
+  //Serial.print("\t");
+  //Serial.print("aSignalingFlags: ");
+ // Serial.print(aSignalingFlags);
+
+
+//Pressure Sensor Detection
+  int total = 0;
+  for (int i = 0; i < sampleSize; i++) {
+    // Read the voltage from the pressure sensor
+    // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
+    int sensorValue = analogRead(pressureSensorPin);
+    total += sensorValue;
+    delay(0);
+  }
+
+  // Find the average of the sensor value readings 
+  int averageSensorValue = total / sampleSize;
+
+  // Convert the analog reading to voltage (0-5V)
+  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
+  //float outputVoltage = averageSensorValue * (5.0 / 1023.0);
+  float outputVoltage = averageSensorValue * (3.2 / 1023.0);
+
+  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
+  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+
+  // Print the pressure to the serial monitor
   Serial.print("\t");
-  Serial.print("aSignalingFlags: ");
-  Serial.println(aSignalingFlags);
+  Serial.print(pressureApplied, decimalPlaces);
+  Serial.println("psi");
 
 
 
