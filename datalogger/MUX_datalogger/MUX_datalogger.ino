@@ -264,7 +264,7 @@ void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) {
   float aTemperature = 0.0;
   uint16_t aSignalingFlags = 0u;
   delay(20);
-  sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F, aFlow, aTemperature, aSignalingFlags);
+  sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3S_4000B, aFlow, aTemperature, aSignalingFlags);
 
   tempCount += 1;
   client.print(waqt);
