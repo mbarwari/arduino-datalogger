@@ -10,6 +10,7 @@
 #define SERIESRESISTOR 10000 
 
 
+
 //This portion is to test the peltier buck converter with serial monitor
 
 //String stringa = String(1);
