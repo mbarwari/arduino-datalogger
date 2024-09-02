@@ -1,10 +1,12 @@
 /*
 MUX datalogger  
-Date: 7/21/2024
+Date: 9/1/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
 Pressure in PSI 
+Currenet in mA
+Voltage in V
 */
 
 // include necessary libraries
@@ -12,18 +14,19 @@ Pressure in PSI
 #include "WiFiS3.h"
 #include <Arduino.h>
 #include <SensirionI2cSf06Lf.h>
+#include <Adafruit_INA260.h>
 
-// Digital pins for the IRQn pins of the sensors to connect to
+// Digital pins for the IRQn pins of the flow sensors to connect to
 #define IRQN_PIN_SENSOR_A 13
 #define IRQN_PIN_SENSOR_B 12
 #define IRQN_PIN_SENSOR_C 11
 
-// I2C addresses for the sensors
+// I2C addresses for the flow sensors
 #define I2C_ADDR_SENSOR_A 0x0A
 #define I2C_ADDR_SENSOR_B 0x0B
 #define I2C_ADDR_SENSOR_C 0x0C
 
-// Define the sensor objects used for sensor communication after the address change
+// Define the flow sensor objects 
 SensirionI2cSf06Lf sensorA;
 SensirionI2cSf06Lf sensorB;
 SensirionI2cSf06Lf sensorC;
@@ -31,6 +34,12 @@ SensirionI2cSf06Lf sensorC;
 // Error message for flow sensor
 static char errorMessage[64];
 static int16_t error;
+
+// Define current sensor objects and I2C addresses 
+Adafruit_INA260 pumpINA260 = Adafruit_INA260();
+Adafruit_INA260 peltierINA260 = Adafruit_INA260();
+uint8_t pumpI2CAddress = 0x40;
+uint8_t peltierI2CAddress = 0x41;
 
 // Pressure sensor specifications
 const float Vsupply = 5.0;  // Supply voltage
@@ -47,9 +56,9 @@ const int decimalPlaces = 3;  // Decimal places for Serial.print()
 #define THERMISTORNOMINAL 10000
 #define TEMPERATURENOMINAL 25
 
-// General variables
+// General global variables
 unsigned long waqt;
-int tempCount, pressureCount, flowCount, ncCount;
+int tempCount, pressureCount, flowCount, currentCount, ncCount;
 
 // WIFI related global variables, macros, and object
 #define SECRET_SSID "pigTrial"
@@ -113,11 +122,18 @@ void setup() {
     delay(100);
   }
 
+  Serial.println("I2C setup: "); 
+
   // change the flow sensor I2C addresses and ......
   flowSensorSetUp();
 
+  // set up the current sensors 
+  currentSensorSetUp();
+
   // set the reference voltage for analog-to-digital conversion to an external source for accuracy
   analogReference(AR_EXTERNAL);
+
+  Serial.println("WIFI setup: "); 
 
   // set up the WiFi Access Point
   setupWiFiAP();
@@ -154,6 +170,7 @@ void loop() {
     tempCount = 0;
     pressureCount = 0;
     flowCount = 0;
+    currentCount = 0;
     ncCount = 0;
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
@@ -213,9 +230,55 @@ void loop() {
     printFlowSensorOutput(sensorB, client);
     printFlowSensorOutput(sensorC, client);
 
+    // read and display the voltage and current of the pump and peltier from the current sensors
+    printCurrentSensorOutput(pumpINA260, client); 
+    printCurrentSensorOutput(peltierINA260, client); 
+
+
     // delay for 5 seconds
     delay(5000);
   }
+}
+
+
+/*
+printCurrentSensorOutput() -  
+Parameters - none
+Return - none (function return type: void) 
+*/
+void printCurrentSensorOutput(Adafruit_INA260& sensor, WiFiClient& client) {
+
+  currentCount += 1;
+  client.print(waqt);
+  client.print(" ");
+  client.print("C");
+  client.print(currentCount);
+  client.print(" ");
+  client.print(sensor.readBusVoltage()/1000.0);
+  client.println(" V");
+}
+
+
+/*
+currentSensorSetUp() -  
+Parameters - none
+Return - none (function return type: void) 
+*/
+void currentSensorSetUp() {
+
+  if (!pumpINA260.begin(pumpI2CAddress)) {
+    Serial.println("Couldn't find pump current sensor");
+    while (1);
+  }
+  Serial.println("Found pump current sensor");
+
+
+  if (!peltierINA260.begin(peltierI2CAddress)) {
+    Serial.println("Couldn't find peltier current sensor");
+    while (1);
+  }
+  Serial.println("Found peltier current sensor");
+  Serial.println();
 }
 
 
@@ -243,7 +306,7 @@ float readPressure(int sig_pin) {
   // Convert the analog reading to voltage (0-5V)
   //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
   //float outputVoltage = averageSensorValue * (5.0 / 1023.0);
-  float outputVoltage = averageSensorValue * (3.2 / 1023.0);
+  float outputVoltage = averageSensorValue * (3.0 / 1023.0);
 
   // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
   float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
@@ -336,7 +399,7 @@ void flowSensorSetUp() {
   }
 
   // Initialize first sensor
-  Serial.println("Initialising sensor A");
+  Serial.println("Initialising flow sensor A");
   sensorA.begin(Wire, 0x0A);
   //readAndPrintSerial(sensorA);
   error = sensorA.startH2oContinuousMeasurement();
@@ -348,7 +411,7 @@ void flowSensorSetUp() {
   }
 
   // Initialize second sensor
-  Serial.println("Initialising sensor B");
+  Serial.println("Initialising flow sensor B");
   sensorB.begin(Wire, 0x0B);
   //readAndPrintSerial(sensorB);
   error = sensorB.startH2oContinuousMeasurement();
@@ -360,7 +423,7 @@ void flowSensorSetUp() {
   }
 
   // Initialize third sensor
-  Serial.println("Initialising sensor C");
+  Serial.println("Initialising flow sensor C");
   sensorC.begin(Wire, 0x0C);
   //readAndPrintSerial(sensorC);
   error = sensorC.startH2oContinuousMeasurement();
@@ -440,7 +503,7 @@ int16_t changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t senso
     return -1;
   }
 
-  Serial.print("Sensor address changed to: 0x");
+  Serial.print("Flow sensor address changed to: 0x");
   if (newI2cAddress < 16) {
     Serial.print("0");
   }
