@@ -1,11 +1,10 @@
 /*
 MUX datalogger  
-Date: 9/1/2024
+Date: 9/3/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
 Pressure in PSI 
-Currenet in mA
 Voltage in V
 */
 
@@ -17,19 +16,19 @@ Voltage in V
 #include <Adafruit_INA260.h>
 
 // Digital pins for the IRQn pins of the flow sensors to connect to
-#define IRQN_PIN_SENSOR_A 13
-#define IRQN_PIN_SENSOR_B 12
-#define IRQN_PIN_SENSOR_C 11
+#define IRQN_PIN_FLOW_SENSOR_A 13
+#define IRQN_PIN_FLOW_SENSOR_B 12
+#define IRQN_PIN_FLOW_SENSOR_C 11
 
 // I2C addresses for the flow sensors
-#define I2C_ADDR_SENSOR_A 0x0A
-#define I2C_ADDR_SENSOR_B 0x0B
-#define I2C_ADDR_SENSOR_C 0x0C
+#define I2C_ADDR_FLOW_SENSOR_A 0x0A
+#define I2C_ADDR_FLOW_SENSOR_B 0x0B
+#define I2C_ADDR_FLOW_SENSOR_C 0x0C
 
 // Define the flow sensor objects 
-SensirionI2cSf06Lf sensorA;
-SensirionI2cSf06Lf sensorB;
-SensirionI2cSf06Lf sensorC;
+SensirionI2cSf06Lf flowSensorA;
+SensirionI2cSf06Lf flowSensorB;
+SensirionI2cSf06Lf flowSensorC;
 
 // Error message for flow sensor
 static char errorMessage[64];
@@ -42,23 +41,23 @@ uint8_t pumpI2CAddress = 0x40;
 uint8_t peltierI2CAddress = 0x41;
 
 // Pressure sensor specifications
-const float Vsupply = 5.0;  // Supply voltage
-const float Pmin = 0.0;     // Minimum pressure in PSI
-const float Pmax = 15.0;    // Maximum pressure in PSI
+const float vSupply = 5.0;  // Supply voltage
+const float pMin = 0.0;     // Minimum pressure in PSI
+const float pMax = 15.0;    // Maximum pressure in PSI
 
 const int sampleSize = 10;   // Sample size
 const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
-// Thermistor related global variables and macros
-#define NUMSAMPLES 10
-#define SERIESRESISTOR 10000
-#define BCOEFFICIENT 3895
-#define THERMISTORNOMINAL 10000
-#define TEMPERATURENOMINAL 25
+// Thermistor related macros
+#define NUM_SAMPLES 10
+#define SERIES_RESISTOR 10000
+#define B_COEFFICIENT 3895
+#define THERMISTOR_NOMINAL 10000
+#define TEMPERATURE_NOMINAL 25
 
 // General global variables
 unsigned long waqt;
-int tempCount, pressureCount, flowCount, currentCount, ncCount;
+int tempCount, pressureCount, flowCount, currentCount, noneCount;
 
 // WIFI related global variables, macros, and object
 #define SECRET_SSID "pigTrial"
@@ -69,20 +68,20 @@ int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 // MUX1 control pins, S0-S3 (digital pins)
-int mux1_s0 = 9;
-int mux1_s1 = 8;
-int mux1_s2 = 7;
-int mux1_s3 = 6;
+int mux1S0 = 9;
+int mux1S1 = 8;
+int mux1S2 = 7;
+int mux1S3 = 6;
 
 // MUX2 control pins, S0-S3 (digital pins)
-int mux2_s0 = 5;
-int mux2_s1 = 4;
-int mux2_s2 = 3;
-int mux2_s3 = 2;
+int mux2S0 = 5;
+int mux2S1 = 4;
+int mux2S2 = 3;
+int mux2S3 = 2;
 
 // MUX1 and MUX2 signal pins, SIG (analog pins)
-int mux1_sig = 0;
-int mux2_sig = 1;
+int mux1Sig = 0;
+int mux2Sig = 1;
 
 
 // setup() function is called once when microcontroller starts
@@ -90,31 +89,31 @@ void setup() {
 
   // set the control pins of MUX1 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from
-  pinMode(mux1_s0, OUTPUT);
-  pinMode(mux1_s1, OUTPUT);
-  pinMode(mux1_s2, OUTPUT);
-  pinMode(mux1_s3, OUTPUT);
+  pinMode(mux1S0, OUTPUT);
+  pinMode(mux1S1, OUTPUT);
+  pinMode(mux1S2, OUTPUT);
+  pinMode(mux1S3, OUTPUT);
 
   // set the initial state of MUX1 (S0-S3) control pins to LOW (0V)
   // this initializes the multiplexer to connect to channel 0.
-  digitalWrite(mux1_s0, LOW);
-  digitalWrite(mux1_s1, LOW);
-  digitalWrite(mux1_s2, LOW);
-  digitalWrite(mux1_s3, LOW);
+  digitalWrite(mux1S0, LOW);
+  digitalWrite(mux1S1, LOW);
+  digitalWrite(mux1S2, LOW);
+  digitalWrite(mux1S3, LOW);
 
   // set the control pins of MUX2 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from
-  pinMode(mux2_s0, OUTPUT);
-  pinMode(mux2_s1, OUTPUT);
-  pinMode(mux2_s2, OUTPUT);
-  pinMode(mux2_s3, OUTPUT);
+  pinMode(mux2S0, OUTPUT);
+  pinMode(mux2S1, OUTPUT);
+  pinMode(mux2S2, OUTPUT);
+  pinMode(mux2S3, OUTPUT);
 
   // set the initial state of MUX2 (S0-S3) control pins to LOW (0V)
   // this initializes the multiplexer to connect to channel 0.  digitalWrite(mux2_s0, LOW);
-  digitalWrite(mux2_s0, LOW);
-  digitalWrite(mux2_s1, LOW);
-  digitalWrite(mux2_s2, LOW);
-  digitalWrite(mux2_s3, LOW);
+  digitalWrite(mux2S0, LOW);
+  digitalWrite(mux2S1, LOW);
+  digitalWrite(mux2S2, LOW);
+  digitalWrite(mux2S3, LOW);
 
   // starts the serial communication at a baud rate of 9600
   Serial.begin(9600);
@@ -171,7 +170,7 @@ void loop() {
     pressureCount = 0;
     flowCount = 0;
     currentCount = 0;
-    ncCount = 0;
+    noneCount = 0;
     // Loop through and read, convert, and display all 16 channels from MUX 1
     for (int i = 0; i < 16; i++) {
       tempCount += 1;
@@ -216,19 +215,19 @@ void loop() {
         client.println(pressure);
       } else {
         // last MUX channel (C15) is not connected
-        ncCount += 1;
+        noneCount += 1;
 
         client.print(waqt);
         client.print(" ");
         client.print("NC");
-        client.println(ncCount);
+        client.println(noneCount);
       }
     }
 
     // read and display the flow rate (in ml/min) from the flow sensors
-    printFlowSensorOutput(sensorA, client);
-    printFlowSensorOutput(sensorB, client);
-    printFlowSensorOutput(sensorC, client);
+    printFlowSensorOutput(flowSensorA, client);
+    printFlowSensorOutput(flowSensorB, client);
+    printFlowSensorOutput(flowSensorC, client);
 
     // read and display the voltage and current of the pump and peltier from the current sensors
     printCurrentSensorOutput(pumpINA260, client); 
@@ -242,7 +241,7 @@ void loop() {
 
 
 /*
-printCurrentSensorOutput() -  
+printCurrentSensorOutput(Adafruit_INA260& sensor, WiFiClient& client) -  
 Parameters - none
 Return - none (function return type: void) 
 */
@@ -283,19 +282,19 @@ void currentSensorSetUp() {
 
 
 /*
-readPressure(int sig_pin) -  
+readPressure(int sigPin) -  
 Parameters - 
-  int sig_pin
+  int sigPin
 Return - pressureApplied (function return type: float) 
 */
-float readPressure(int sig_pin) {
+float readPressure(int sigPin) {
   delay(50);
   int total = 0;
 
   for (int i = 0; i < sampleSize; i++) {
     // Read the voltage from the pressure sensor
     // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
-    int sensorValue = analogRead(sig_pin);
+    int sensorValue = analogRead(sigPin);
     total += sensorValue;
     delay(0);
   }
@@ -368,7 +367,7 @@ void flowSensorSetUp() {
   // Change address of the first sensor
   // Set IRQN_PIN_SENSOR_A to the GPIO pin number where you connected Pin 1
   // of your first sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_SENSOR_A, IRQN_PIN_SENSOR_A);
+  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_A, IRQN_PIN_FLOW_SENSOR_A);
   if (error != NO_ERROR) {
     Serial.print("Error changing sensor address: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -379,7 +378,7 @@ void flowSensorSetUp() {
   // Change address of the first sensor
   // Set IRQN_PIN_SENSOR_B to the GPIO pin number where you connected Pin 1
   // of your second sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_SENSOR_B, IRQN_PIN_SENSOR_B);
+  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_B, IRQN_PIN_FLOW_SENSOR_B);
   if (error != NO_ERROR) {
     Serial.print("Error changing sensor address: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -390,7 +389,7 @@ void flowSensorSetUp() {
   // Change address of the first sensor
   // Set IRQN_PIN_SENSOR_B to the GPIO pin number where you connected Pin 1
   // of your third sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_SENSOR_C, IRQN_PIN_SENSOR_C);
+  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_C, IRQN_PIN_FLOW_SENSOR_C);
   if (error != NO_ERROR) {
     Serial.print("Error changing sensor address: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -400,9 +399,9 @@ void flowSensorSetUp() {
 
   // Initialize first sensor
   Serial.println("Initialising flow sensor A");
-  sensorA.begin(Wire, 0x0A);
+  flowSensorA.begin(Wire, 0x0A);
   //readAndPrintSerial(sensorA);
-  error = sensorA.startH2oContinuousMeasurement();
+  error = flowSensorA.startH2oContinuousMeasurement();
   if (error != NO_ERROR) {
     Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor A: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -412,9 +411,9 @@ void flowSensorSetUp() {
 
   // Initialize second sensor
   Serial.println("Initialising flow sensor B");
-  sensorB.begin(Wire, 0x0B);
+  flowSensorB.begin(Wire, 0x0B);
   //readAndPrintSerial(sensorB);
-  error = sensorB.startH2oContinuousMeasurement();
+  error = flowSensorB.startH2oContinuousMeasurement();
   if (error != NO_ERROR) {
     Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor B: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -424,9 +423,9 @@ void flowSensorSetUp() {
 
   // Initialize third sensor
   Serial.println("Initialising flow sensor C");
-  sensorC.begin(Wire, 0x0C);
+  flowSensorC.begin(Wire, 0x0C);
   //readAndPrintSerial(sensorC);
-  error = sensorC.startH2oContinuousMeasurement();
+  error = flowSensorC.startH2oContinuousMeasurement();
   if (error != NO_ERROR) {
     Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor C: ");
     errorToString(error, errorMessage, sizeof errorMessage);
@@ -513,29 +512,29 @@ int16_t changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t senso
 
 
 /*
-readThermistor(int sig_pin) - converts thermistor value to temperature using the Steinhart-Hart equation
+readThermistor(int sigPin) - converts thermistor value to temperature using the Steinhart-Hart equation
 Parameters - 
-  int sig_pin -   
+  int sigPin -   
 Return - (function return type: int)
   float steinhart - temperature in celsius of the thermistor  
 */
-float readThermistor(int sig_pin) {
+float readThermistor(int sigPin) {
 
   // read the value at the SIG pin
   waqt = millis() / 1000;
-  uint16_t val[NUMSAMPLES] = { 0 };
+  uint16_t val[NUM_SAMPLES] = { 0 };
   delay(50);
-  for (uint8_t j = 0; j < NUMSAMPLES; j++) {  // take N samples in a row, with a slight delay
-    val[j] = analogRead(sig_pin);
+  for (uint8_t j = 0; j < NUM_SAMPLES; j++) {  // take N samples in a row, with a slight delay
+    val[j] = analogRead(sigPin);
     delay(0);
   }
 
   float avgval = 0;
-  for (int k = 0; k < NUMSAMPLES; k++) {
+  for (int k = 0; k < NUM_SAMPLES; k++) {
     avgval += val[k];
   }
-  avgval = SERIESRESISTOR / (1023 / (avgval / NUMSAMPLES) - 1);
-  float steinhart = 1 / ((log(avgval / THERMISTORNOMINAL)) / BCOEFFICIENT + 1.0 / (TEMPERATURENOMINAL + 273.15)) - 273.5;  // (R/Ro)
+  avgval = SERIES_RESISTOR / (1023 / (avgval / NUM_SAMPLES) - 1);
+  float steinhart = 1 / ((log(avgval / THERMISTOR_NOMINAL)) / B_COEFFICIENT + 1.0 / (TEMPERATURE_NOMINAL + 273.15)) - 273.5;  // (R/Ro)
 
   return steinhart;
 }
@@ -553,21 +552,21 @@ int setMux(int mux, int channel) {
 
   // declare local array for control pins (S0-S3) and variable for SIG pin
   int controlPin[4];
-  int sig_pin;
+  int sigPin;
 
   // set the correct values for each MUX's control pins and SIG pins
   if (mux == 1) {
-    controlPin[0] = mux1_s0;
-    controlPin[1] = mux1_s1;
-    controlPin[2] = mux1_s2;
-    controlPin[3] = mux1_s3;
-    sig_pin = mux1_sig;
+    controlPin[0] = mux1S0;
+    controlPin[1] = mux1S1;
+    controlPin[2] = mux1S2;
+    controlPin[3] = mux1S3;
+    sigPin = mux1Sig;
   } else if (mux == 2) {
-    controlPin[0] = mux2_s0;
-    controlPin[1] = mux2_s1;
-    controlPin[2] = mux2_s2;
-    controlPin[3] = mux2_s3;
-    sig_pin = mux2_sig;
+    controlPin[0] = mux2S0;
+    controlPin[1] = mux2S1;
+    controlPin[2] = mux2S2;
+    controlPin[3] = mux2S3;
+    sigPin = mux2Sig;
   }
 
   // 2D integer array for MUX channels
@@ -596,7 +595,7 @@ int setMux(int mux, int channel) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
-  return sig_pin;
+  return sigPin;
 }
 
 
