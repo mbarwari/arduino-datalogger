@@ -172,7 +172,7 @@ void readAndPrintMeasurement(SensirionI2cSf06Lf& sensor) {
     float aFlow = 0.0;
     float aTemperature = 0.0;
     uint16_t aSignalingFlags = 0u;
-    error = sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3C_1300F,
+    error = sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3S_4000B,
                                        aFlow, aTemperature, aSignalingFlags);
     if (error != NO_ERROR) {
         Serial.print("Error trying to execute readMeasurementData(): ");
