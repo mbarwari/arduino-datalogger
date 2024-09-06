@@ -1,11 +1,12 @@
 /*
 MUX datalogger  
-Date: 9/3/2024
+Date: 9/5/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
 Pressure in PSI 
 Voltage in V
+Current in mA
 */
 
 // include necessary libraries
@@ -250,11 +251,19 @@ void printCurrentSensorOutput(Adafruit_INA260& sensor, WiFiClient& client) {
   currentCount += 1;
   client.print(waqt);
   client.print(" ");
-  client.print("C");
+  client.print("V");
   client.print(currentCount);
   client.print(" ");
   client.print(sensor.readBusVoltage()/1000.0);
   client.println(" V");
+
+  client.print(waqt);
+  client.print(" ");
+  client.print("C");
+  client.print(currentCount);
+  client.print(" ");
+  client.print(sensor.readCurrent());
+  client.println(" mA");
 }
 
 
