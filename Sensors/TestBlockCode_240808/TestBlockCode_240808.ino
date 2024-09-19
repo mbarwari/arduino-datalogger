@@ -1,6 +1,6 @@
 #define DACPIN A0
-#define THERMISTORPIN1 A1
-#define THERMISTORPIN2 A2
+//#define THERMISTORPIN1 A1
+//#define THERMISTORPIN2 A2
 //#define THERMISTORPIN3 A3
 #define THERMISTORNOMINAL 10000  
 #define TEMPERATURENOMINAL 25 
@@ -20,6 +20,12 @@ int CompSetPeltier;
 #include <Adafruit_INA260.h>
 #include <Wire.h>
 #include <pwm.h>
+
+//Needed for SD card reader
+#include <SPI.h>
+#include <SD.h>
+//File myFile;
+
 
 //Needed for the flow sensor
 #include <Arduino.h>
@@ -51,7 +57,7 @@ int freq = 10;  // in hertz, change accordingly, randomly set at 0 here, can inc
 
   //These are parameters that can be adjusted for temperature cutoffs -- TempIdeals are equivalent to Setpoint
   int BrainTempIdeal = 10; //Ideal brain temperature, currently 12 for testing purposes (should be 25)
-  int WBTempMax = 26; //The maximum peltier plate temperature, currently 25 for testing purposes (should be 40)
+  int WBTempMax = 100; //The maximum peltier plate temperature, currently 25 for testing purposes (should be 40)
   int WBTempIdeal = 20; //The ideal temperature of the WB, currently 22 for testing purposes (should be 35)
 
 unsigned long waqt;
@@ -72,7 +78,14 @@ uint16_t samplesa3[NUMSAMPLES];
   const int sampleSize = 10;   // Sample size
   const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
-
+//Setup for Multiplexer
+  // Multiplexer control pins, S0-S3 (digital pins)
+  int mux1S0 = 9;
+  int mux1S1 = 8;
+  int mux1S2 = 7;
+  int mux1S3 = 6;
+  // Multiplexer signal pins
+  int mux1Sig = A1;
 
 void setup() {
 // put your setup code here, to run once:
@@ -93,6 +106,18 @@ if (!ina260_waterpump.begin(0x41)) {
 }
   Serial.println("Found INA260 chips");
 
+
+
+//Initializing SD Card
+ /* Serial.print("Initializing SD card...");
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+  myFile = SD.open("testcode.txt", FILE_WRITE); */
+
+  
 
 pwm.begin(100.0f, 50.0f);
   //analogReference(EXTERNAL);
@@ -115,6 +140,22 @@ pinMode(DACPIN, OUTPUT);
   flow_sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
   delay(100);
   flow_sensor.startH2oContinuousMeasurement();
+
+
+//Initializing Multiplexer
+  //Defining pin outputs
+  pinMode(mux1S0, OUTPUT);
+  pinMode(mux1S1, OUTPUT);
+  pinMode(mux1S2, OUTPUT);
+  pinMode(mux1S3, OUTPUT);
+
+  //Set control pins to 0 so it starts reading signals on channel 0 of multiplexer
+  digitalWrite(mux1S0, LOW);
+  digitalWrite(mux1S1, LOW);
+  digitalWrite(mux1S2, LOW);
+  digitalWrite(mux1S3, LOW);
+
+
 }
 
 void loop() {
@@ -122,31 +163,38 @@ void loop() {
 
 //Getting temperatures
   uint8_t i;
+  //Finding the right channel for thermistors on multiplexer
+  int sig_therm1 = setMux(1, 0); //Channel 0 for Peltier thermistor
+  int sig_therm2 = setMux(1, 1); //Channel 1 for Water block thermistor
+
     waqt = millis()/1000;
-      for (i=0; i< NUMSAMPLES; i++) {          // take N samples in a row, with a slight delay
-      samplesa1[i] = analogRead(THERMISTORPIN1);
-      samplesa2[i] = analogRead(THERMISTORPIN2);
+      for (i=0; i < NUMSAMPLES; i++) {          // take N samples in a row, with a slight delay
+      samplesa1[i] = analogRead(sig_therm1); //Reading Peltier thermistor
+      samplesa2[i] = analogRead(sig_therm2); //Reading water block thermistor
       //samplesa3[i] = analogRead(THERMISTORPIN3);
     delay(100);
   }
-  
+
+
+
   float avga1;
   float avga2;
-  float avga3;
+  //float avga3;
 
  // average all the samples out
   avga1 = 0;
   avga2 = 0;
-  avga3 = 0;
-
+  //avga3 = 0;
+ 
   for (i=0; i< NUMSAMPLES; i++) {
      avga1 += samplesa1[i];
      avga2 += samplesa2[i];
-     avga3 += samplesa3[i];
+     //avga3 += samplesa3[i];
   }
+
   avga1 = SERIESRESISTOR / (1023 /(avga1/NUMSAMPLES) - 1);
   avga2 = SERIESRESISTOR / (1023 /(avga2/NUMSAMPLES) - 1);
-  avga3 = avga3/NUMSAMPLES;
+  //avga3 = avga3/NUMSAMPLES;
 
   //float flow3 = 100 * (avga3 - 0.045);
 
@@ -241,8 +289,10 @@ Serial.print("WB_OUT(div10):");
   float peltier_current;
   peltier_current = ina260_peltier.readCurrent()/1000;
 
+  //Turning off Peltier if drawing too much current
   if (peltier_current >= 2) {
   OutputPeltierPID = 0;
+  Serial.print("ERROR: Peltier Overcurrenting");
   }
 
 
@@ -282,16 +332,19 @@ Serial.print("WB_OUT(div10):");
 
 //Pressure Sensor Detection
   int total = 0;
+  int sig_pressure = setMux(1, 3);
   for (int i = 0; i < sampleSize; i++) {
     // Read the voltage from the pressure sensor
     // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
-    int sensorValue = analogRead(pressureSensorPin);
+    int sensorValue = analogRead(sig_pressure);
     total += sensorValue;
     delay(0);
   }
 
   // Find the average of the sensor value readings 
   int averageSensorValue = total / sampleSize;
+  Serial.print("\t");
+  Serial.println(averageSensorValue);
 
   // Convert the analog reading to voltage (0-5V)
   //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
@@ -299,20 +352,102 @@ Serial.print("WB_OUT(div10):");
   float outputVoltage = averageSensorValue * (3.2 / 1023.0);
 
   // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
-  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+  float pressureApplied = (15 / (0.8 * 5)) * (outputVoltage - 0.5) + 0;
 
   // Print the pressure to the serial monitor
   Serial.print("\t");
   Serial.print(pressureApplied, decimalPlaces);
   Serial.println("psi");
 
+  
+// If pressure is too high/low, it turns the system off
+  float lowpressure = 0.75; // Set pressures once actual known
+  float highpressure = 2;
+  if (pressureApplied < lowpressure || pressureApplied > highpressure )
+    {
+      analogWrite(DACPIN, 0); //Turning peltier off
+      freq = 0; //Turning off water pumps
+      pwm.period_raw(50000000/freq);
+      pwm.pulse_perc(50.0f);
+      Serial.print("ERROR: Aberrant Pressure Levels");
+      Serial.println(pressureApplied);
+  }
 
+// If water block temperature is 6 degrees above baseline and flow rate max, sets a countdown to change or else will turn off
+  if (WBTemp_atm >= WBTempMax && freq == 60) 
+    {
+      //Start a countdown that lasts 3 min. Then, start measuring. If it does not cool down 3 degrees in those 3 minutes, stop pumps and piezo
+      int starttime = millis();
+      int endtime = starttime;
+      int loopcount;
+      while ((endtime - starttime) <= 180000) // 1000 ms/s * 60s/min * 3 min
+        {   
+          // code here
+          analogWrite(DACPIN, 255); //Turning peltier off
+          freq = 60; //Turning off water pumps
+          pwm.period_raw(50000000/freq);
+          pwm.pulse_perc(50.0f);
+          
+          loopcount = loopcount+1;
+          endtime = millis();
+          }
 
-//delay (400);
+      if (WBTemp_atm >= (WBTempIdeal + 3))
+      { 
+        analogWrite(DACPIN, 0); //Turning peltier off
+        freq = 0; //Turning off water pumps
+        pwm.period_raw(50000000/freq);
+        pwm.pulse_perc(50.0f);
+        Serial.println("CRITICAL ERROR: Cooling failed, Shutting system down");
+        }
+      }
 }
 
-/*float readCurrent() {
-  Adafruit_I2CRegister current =
-      Adafruit_I2CRegister(i2c_dev, INA260_REG_CURRENT, 2, MSBFIRST);
-  return (int16_t)current.read() * 1.25;
-} */
+//This code helps us find the right channel for the analog sensors. 
+//Mux is what multiplexer it is.
+//Channel is what channel it is connected to on multiplexer.
+int setMux(int mux, int channel) {
+
+  // declare local array for control pins (S0-S3) and variable for SIG pin
+  int controlPin[4];
+  int sigPin;
+
+  // set the correct values for each MUX's control pins and SIG pins.
+  //Currently, coded for one multiplexer. If second one connected, need to copy next few lines and change mux == 2 and mux1 to mux2
+  if (mux == 1) {
+    controlPin[0] = mux1S0;
+    controlPin[1] = mux1S1;
+    controlPin[2] = mux1S2;
+    controlPin[3] = mux1S3;
+    sigPin = mux1Sig;
+  }
+
+  // 2D integer array for MUX channels
+  // arrayName[row][column]
+  int muxChannel[16][4] = {
+    { 0, 0, 0, 0 },  //channel 0
+    { 1, 0, 0, 0 },  //channel 1
+    { 0, 1, 0, 0 },  //channel 2
+    { 1, 1, 0, 0 },  //channel 3
+    { 0, 0, 1, 0 },  //channel 4
+    { 1, 0, 1, 0 },  //channel 5
+    { 0, 1, 1, 0 },  //channel 6
+    { 1, 1, 1, 0 },  //channel 7
+    { 0, 0, 0, 1 },  //channel 8
+    { 1, 0, 0, 1 },  //channel 9
+    { 0, 1, 0, 1 },  //channel 10
+    { 1, 1, 0, 1 },  //channel 11
+    { 0, 0, 1, 1 },  //channel 12
+    { 1, 0, 1, 1 },  //channel 13
+    { 0, 1, 1, 1 },  //channel 14
+    { 1, 1, 1, 1 }   //channel 15
+  };
+
+  // loop through the 4 SIG
+  for (int i = 0; i < 4; i++) {
+    digitalWrite(controlPin[i], muxChannel[channel][i]);
+  }
+
+  return sigPin;
+}
+
