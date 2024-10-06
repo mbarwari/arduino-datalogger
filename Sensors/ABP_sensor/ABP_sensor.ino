@@ -27,10 +27,14 @@ const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
 
 void setup() {
-  //analogReadResolution(14);  // Increase dafault 10-bit ADC resolution to 14-bit
+  
+  // Increase dafault 10-bit ADC resolution to 12, 14, or 16 -bit 
+  //analogReadResolution(14);  
+  
   Serial.begin(9600);  // Initialize serial communication
 
-  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy
+  // sets the reference voltage for the analog-to-digital conversion (ADC) to an external source 
+  // on the GIGA analogReference() does not exist 
   //analogReference(AR_EXTERNAL);
 }
 
