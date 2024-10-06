@@ -18,7 +18,7 @@ Sensor       Arduino
 const int pressureSensorPin = A2;
 
 // Sensor specifications
-const float Vsupply = 5.0;    // Supply voltage (3.3V or 5V)
+const float Vsupply = 3.3;    // Supply voltage (3.3V or 5V)
 const float Pmin = 0.0;       // Minimum pressure in PSI
 const float Pmax = 15.0;      // Maximum pressure in PSI
 

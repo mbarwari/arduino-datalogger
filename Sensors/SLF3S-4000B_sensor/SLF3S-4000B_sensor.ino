@@ -27,8 +27,16 @@ void setup() {
   while (!Serial) {
     delay(100);
   }
+  
+  // For Arduino Uno R4 WiFi
+  /*
   Wire.begin();
   sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
+  */
+
+  // For Arduino Giga R1 WiFi
+  Wire1.begin();
+  sensor.begin(Wire1, SLF3C_1300F_I2C_ADDR_08);
 
   delay(100);
   sensor.startH2oContinuousMeasurement();
