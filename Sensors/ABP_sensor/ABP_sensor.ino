@@ -11,14 +11,14 @@ Sensor       Arduino
 3.Vout       ->   A2 (or any analog input pin, but make sure to change pressureSensorPin value)
 4.NC         ->   NC
 5.NC         ->   NC
-6.Vsupply    ->   5V
+6.Vsupply    ->   3.3V or 5V
 */
 
 // Define the analog input pin for the sensor
 const int pressureSensorPin = A2;
 
 // Sensor specifications
-const float Vsupply = 5.0;    // Supply voltage
+const float Vsupply = 3.3;    // Supply voltage (3.3V or 5V)
 const float Pmin = 0.0;       // Minimum pressure in PSI
 const float Pmax = 15.0;      // Maximum pressure in PSI
 
@@ -27,11 +27,15 @@ const int decimalPlaces = 3;  // Decimal places for Serial.print()
 
 
 void setup() {
-  //analogReadResolution(14);  // Increase dafault 10-bit ADC resolution to 14-bit
+  
+  // Increase dafault 10-bit ADC resolution to 12, 14, or 16 -bit 
+  //analogReadResolution(14);  
+  
   Serial.begin(9600);  // Initialize serial communication
 
-  // sets the reference voltage for analog-to-digital conversion to an external source for accuracy
-  analogReference(AR_EXTERNAL);
+  // sets the reference voltage for the analog-to-digital conversion (ADC) to an external source 
+  // on the GIGA analogReference() does not exist 
+  //analogReference(AR_EXTERNAL);
 }
 
 void loop() {
@@ -53,17 +57,17 @@ void loop() {
   Serial.print(averageSensorValue);
   Serial.print(" ");
 
-  // Convert the analog reading to voltage (0-5V)
-  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
-  //float outputVoltage = averageSensorValue * (5.0 / 1023.0);
-  float outputVoltage = averageSensorValue * (3.2 / 1023.0);
+  // Convert the analog reading to voltage (0-3.3V or 0-5V)
+  //float outputVoltage = averageSensorValue * (Vsupply / 16383.0);
+  float outputVoltage = averageSensorValue * (Vsupply / 1023.0);
 
   // Print the voltage to the serial monitor
   Serial.print(outputVoltage, decimalPlaces);
   Serial.print(" ");
 
-  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
-  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+  //pressureApplied = ((Pmax - Pmin) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply) + Pmin 
+  //pressureApplied = ((15) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply)
+  float pressureApplied = (15 / (0.8 * Vsupply)) * (outputVoltage - 0.10 * Vsupply);
 
   // Print the pressure to the serial monitor
   Serial.println(pressureApplied, decimalPlaces);

@@ -1,6 +1,5 @@
 /*
 MUX datalogger  
-Date: 9/5/2024
 
 Temperature in Celsius 
 Flow rate in ml/min 
@@ -19,17 +18,17 @@ Current in mA
 // Digital pins for the IRQn pins of the flow sensors to connect to
 #define IRQN_PIN_FLOW_SENSOR_A 13
 #define IRQN_PIN_FLOW_SENSOR_B 12
-#define IRQN_PIN_FLOW_SENSOR_C 11
+//#define IRQN_PIN_FLOW_SENSOR_C 11
 
 // I2C addresses for the flow sensors
 #define I2C_ADDR_FLOW_SENSOR_A 0x0A
 #define I2C_ADDR_FLOW_SENSOR_B 0x0B
-#define I2C_ADDR_FLOW_SENSOR_C 0x0C
+//#define I2C_ADDR_FLOW_SENSOR_C 0x0C
 
 // Define the flow sensor objects 
 SensirionI2cSf06Lf flowSensorA;
 SensirionI2cSf06Lf flowSensorB;
-SensirionI2cSf06Lf flowSensorC;
+//SensirionI2cSf06Lf flowSensorC;
 
 // Error message for flow sensor
 static char errorMessage[64];
@@ -42,7 +41,7 @@ uint8_t pumpI2CAddress = 0x40;
 uint8_t peltierI2CAddress = 0x41;
 
 // Pressure sensor specifications
-const float vSupply = 5.0;  // Supply voltage
+const float vSupply = 3.3;  // Supply voltage
 const float pMin = 0.0;     // Minimum pressure in PSI
 const float pMax = 15.0;    // Maximum pressure in PSI
 
@@ -228,7 +227,7 @@ void loop() {
     // read and display the flow rate (in ml/min) from the flow sensors
     printFlowSensorOutput(flowSensorA, client);
     printFlowSensorOutput(flowSensorB, client);
-    printFlowSensorOutput(flowSensorC, client);
+    //printFlowSensorOutput(flowSensorC, client);
 
     // read and display the voltage and current of the pump and peltier from the current sensors
     printCurrentSensorOutput(pumpINA260, client); 
@@ -311,13 +310,13 @@ float readPressure(int sigPin) {
   // Find the average of the sensor value readings 
   int averageSensorValue = total / sampleSize;
 
-  // Convert the analog reading to voltage (0-5V)
-  //float outputVoltage = averageSensorValue * (5.0 / 16383.0);
-  //float outputVoltage = averageSensorValue * (5.0 / 1023.0);
-  float outputVoltage = averageSensorValue * (3.0 / 1023.0);
+  // Convert the analog reading to voltage (0-3.3V or 0-5V)
+  //float outputVoltage = averageSensorValue * (Vsupply / 16383.0);
+  float outputVoltage = averageSensorValue * (vSupply / 1023.0);
 
-  // pressureApplied = 15/(0.8*5)*(Vout-0.5) + 0
-  float pressureApplied = 15 / (0.8 * 5) * (outputVoltage - 0.5) + 0;
+  //pressureApplied = ((Pmax - Pmin) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply) + Pmin 
+  //pressureApplied = ((15) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply)
+  float pressureApplied = (15 / (0.8 * vSupply)) * (outputVoltage - 0.10 * vSupply);
 
   return pressureApplied;
 }
@@ -395,6 +394,8 @@ void flowSensorSetUp() {
     return;
   }
 
+  /*
+
   // Change address of the first sensor
   // Set IRQN_PIN_SENSOR_B to the GPIO pin number where you connected Pin 1
   // of your third sensor.
@@ -405,6 +406,7 @@ void flowSensorSetUp() {
     Serial.println(errorMessage);
     return;
   }
+  */
 
   // Initialize first sensor
   Serial.println("Initialising flow sensor A");
@@ -430,6 +432,7 @@ void flowSensorSetUp() {
     return;
   }
 
+/*
   // Initialize third sensor
   Serial.println("Initialising flow sensor C");
   flowSensorC.begin(Wire, 0x0C);
@@ -441,6 +444,7 @@ void flowSensorSetUp() {
     Serial.println(errorMessage);
     return;
   }
+  */
 }
 
 
