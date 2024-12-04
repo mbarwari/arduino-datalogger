@@ -11,8 +11,14 @@ Sensor       Arduino
 6.NC (Empty)    ->   NC
 
 Pull-up resistors: 
-  1.8K pull-up resistor from VDD to SDA 
+  1.8K pull-up resistor from SDA to VDD
   1.8K pull-up resistor from VDD to SCL
+
+This code works on the Arduino Uno R4 WiFi, Arduino GIGA R1 WiFi, and ESP32-S2-DevKitM-1-N4R2.
+
+ESP32-S2-DevKitM-1-N4R2
+  SDA - Pin 8 
+  SCL - Pin 9  
 
 */ 
 
@@ -28,15 +34,8 @@ void setup() {
     delay(100);
   }
   
-  // For Arduino Uno R4 WiFi
-  /*
   Wire.begin();
   sensor.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
-  */
-
-  // For Arduino Giga R1 WiFi
-  Wire1.begin();
-  sensor.begin(Wire1, SLF3C_1300F_I2C_ADDR_08);
 
   delay(100);
   sensor.startH2oContinuousMeasurement();
