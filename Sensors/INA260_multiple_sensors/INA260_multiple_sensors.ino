@@ -1,3 +1,11 @@
+/*
+This code works on the Arduino Uno R4 WiFi, Arduino GIGA R1 WiFi, and ESP32-S2-DevKitM-1-N4R2.
+
+ESP32-S2-DevKitM-1-N4R2
+  SDA - Pin 8 
+  SCL - Pin 9  
+*/
+
 #include <Adafruit_INA260.h>
 
 Adafruit_INA260 currentSensor1 = Adafruit_INA260();
@@ -19,7 +27,6 @@ void setup() {
     while (1);
   }
   Serial.println("Found current sensor 1");
-
 
   if (!currentSensor2.begin(address2)) {
     Serial.println("Couldn't find current sensor 2");
