@@ -1,8 +1,8 @@
 /* 
 Sensirion SLF3S-4000B liquid flow sensor 
 
-Sensor       Arduino
-------------------------- 
+Sensor       Microcontroller Development Board
+--------------------------------------------------  
 1.IRQn (Brown)  ->   NC
 2.SDA (Red)     ->   SDA
 3.VDD (Orange)  ->   3.3V
@@ -19,7 +19,6 @@ This code works on the Arduino Uno R4 WiFi, Arduino GIGA R1 WiFi, and ESP32-S2-D
 ESP32-S2-DevKitM-1-N4R2
   SDA - Pin 8 
   SCL - Pin 9  
-
 */ 
 
 #include <SensirionI2cSf06Lf.h>
