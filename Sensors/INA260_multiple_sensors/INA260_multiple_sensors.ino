@@ -1,4 +1,21 @@
 /*
+Adafruit INA260 High or Low Side Voltage, Current, Power Sensor
+
+Bus voltage = 0-36 VDC
+Max current = 15A 
+VCC/Logic = 3.3V or 5V
+
+Sensor       Microcontroller Development Board
+-------------------------------------------------- 
+1.Vcc        ->   3.3V or 5V
+2.GND        ->   GND
+3.SCL        ->   SCL
+4.SDA        ->   SDA
+5.Alert      ->   NC
+6.VBus       ->   NC
+7.Vin+       ->   NC
+8.Vin-       ->   NC
+
 This code works on the Arduino Uno R4 WiFi, Arduino GIGA R1 WiFi, and ESP32-S2-DevKitM-1-N4R2.
 
 ESP32-S2-DevKitM-1-N4R2
