@@ -26,13 +26,13 @@ void setup() {
 
   Serial.println("Adafruit INA260 Test");
 
-  if (!currentSensor1.begin(address1)) {
+  if (!currentSensor1.begin(address1, &Wire)) {
     Serial.println("Couldn't find current sensor 1");
     while (1);
   }
   Serial.println("Found current sensor 1");
 
-  if (!currentSensor2.begin(address2)) {
+  if (!currentSensor2.begin(address2, &Wire)) {
     Serial.println("Couldn't find current sensor 2");
     while (1);
   }
