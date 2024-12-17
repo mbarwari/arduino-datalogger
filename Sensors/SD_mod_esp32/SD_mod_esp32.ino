@@ -89,26 +89,18 @@ void setup() {
   uint64_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %lluMB\n", cardSize);
 
-  listDir(SD, "/", 0);
   writeFile(SD, "/data.txt", "");
   appendFile(SD, "/data.txt", "DATA FILE\n");
-  readFile(SD, "/data.txt");
-  testFileIO(SD, "/data.txt");
-  Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
-  Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
 }
 
 
 void loop() {
 
-  String data = ""; 
-
   for(int i=0; i<10; i++){
-    data += String(i);
-    data += "\n";
-    appendFile(SD, "/data.txt", data.c_str());
-    data = ""; 
+    appendFile(SD, "/data.txt", "0123456789\n");
   }
+
+  Serial.print("done"); 
 
   while(1){
   }
