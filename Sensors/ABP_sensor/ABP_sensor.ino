@@ -35,7 +35,7 @@ void setup() {
 
   // sets the reference voltage for the analog-to-digital conversion (ADC) to an external source 
   // on the GIGA analogReference() does not exist 
-  //analogReference(AR_EXTERNAL);
+  analogReference(AR_EXTERNAL);
 }
 
 void loop() {
