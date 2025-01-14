@@ -15,27 +15,12 @@ Current in mA
 #include <SensirionI2cSf06Lf.h>
 #include <Adafruit_INA260.h>
 
-// Digital pins for the IRQn pins of the flow sensors to connect to
-#define IRQN_PIN_FLOW_SENSOR_A 13
-#define IRQN_PIN_FLOW_SENSOR_B 12
-#define IRQN_PIN_FLOW_SENSOR_C 11
-
-// I2C addresses for the flow sensors
-#define I2C_ADDR_FLOW_SENSOR_A 0x0A
-#define I2C_ADDR_FLOW_SENSOR_B 0x0B
-#define I2C_ADDR_FLOW_SENSOR_C 0x0C
 
 // Define the flow sensor objects 
 SensirionI2cSf06Lf flowSensorA;
-//SensirionI2cSf06Lf flowSensorB;
-//SensirionI2cSf06Lf flowSensorC;
-
-// Error message for flow sensor
-static char errorMessage[64];
-static int16_t error;
 
 // Define current sensor objects and I2C addresses 
-//Adafruit_INA260 pumpINA260 = Adafruit_INA260();
+Adafruit_INA260 pumpINA260 = Adafruit_INA260();
 Adafruit_INA260 peltierINA260 = Adafruit_INA260();
 uint8_t pumpI2CAddress = 0x40;
 uint8_t peltierI2CAddress = 0x41;
@@ -130,7 +115,7 @@ void setup() {
   currentSensorSetUp();
 
   // set the reference voltage for analog-to-digital conversion to an external source for accuracy
-  analogReference(AR_EXTERNAL);
+  //analogReference(AR_EXTERNAL);
 
   Serial.println("WIFI setup: "); 
 
@@ -177,6 +162,13 @@ void loop() {
       int sig = setMux(1, i);
       float temp = readThermistor(sig);
 
+      Serial.print(waqt);
+      Serial.print(" ");
+      Serial.print("T");
+      Serial.print(tempCount);
+      Serial.print(" ");
+      Serial.println(temp);
+
       client.print(waqt);
       client.print(" ");
       client.print("T");
@@ -194,6 +186,13 @@ void loop() {
         int sig = setMux(2, i);
         float temp = readThermistor(sig);
 
+        Serial.print(waqt);
+        Serial.print(" ");
+        Serial.print("T");
+        Serial.print(tempCount);
+        Serial.print(" ");
+        Serial.println(temp);
+
         client.print(waqt);
         client.print(" ");
         client.print("T");
@@ -207,6 +206,13 @@ void loop() {
         int sig = setMux(2, i);
         float pressure = readPressure(sig);
 
+        Serial.print(waqt);
+        Serial.print(" ");
+        Serial.print("P");
+        Serial.print(pressureCount);
+        Serial.print(" ");
+        Serial.println(pressure);
+
         client.print(waqt);
         client.print(" ");
         client.print("P");
@@ -217,6 +223,11 @@ void loop() {
         // last MUX channel (C15) is not connected
         noneCount += 1;
 
+        Serial.print(waqt);
+        Serial.print(" ");
+        Serial.print("NC");
+        Serial.println(noneCount);
+
         client.print(waqt);
         client.print(" ");
         client.print("NC");
@@ -226,8 +237,6 @@ void loop() {
 
     // read and display the flow rate (in ml/min) from the flow sensors
     printFlowSensorOutput(flowSensorA, client);
-    //printFlowSensorOutput(flowSensorB, client);
-    //printFlowSensorOutput(flowSensorC, client);
 
     // read and display the voltage and current of the pump and peltier from the current sensors
     //printCurrentSensorOutput(pumpINA260, client); 
@@ -248,6 +257,23 @@ Return - none (function return type: void)
 void printCurrentSensorOutput(Adafruit_INA260& sensor, WiFiClient& client) {
 
   currentCount += 1;
+  Serial.print(waqt);
+  Serial.print(" ");
+  Serial.print("V");
+  Serial.print(currentCount);
+  Serial.print(" ");
+  Serial.print(sensor.readBusVoltage()/1000.0);
+  Serial.println(" V");
+
+  Serial.print(waqt);
+  Serial.print(" ");
+  Serial.print("C");
+  Serial.print(currentCount);
+  Serial.print(" ");
+  Serial.print(sensor.readCurrent());
+  Serial.println(" mA");
+
+
   client.print(waqt);
   client.print(" ");
   client.print("V");
@@ -338,6 +364,13 @@ void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) {
   sensor.readMeasurementData(INV_FLOW_SCALE_FACTORS_SLF3S_4000B, aFlow, aTemperature, aSignalingFlags);
 
   tempCount += 1;
+  Serial.print(waqt);
+  Serial.print(" ");
+  Serial.print("T");
+  Serial.print(tempCount);
+  Serial.print(" ");
+  Serial.println(aTemperature);
+
   client.print(waqt);
   client.print(" ");
   client.print("T");
@@ -346,6 +379,13 @@ void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) {
   client.println(aTemperature);
 
   flowCount += 1;
+  Serial.print(waqt);
+  Serial.print(" ");
+  Serial.print("F");
+  Serial.print(flowCount);
+  Serial.print(" ");
+  Serial.println(aFlow);
+
   client.print(waqt);
   client.print(" ");
   client.print("F");
@@ -355,179 +395,23 @@ void printFlowSensorOutput(SensirionI2cSf06Lf& sensor, WiFiClient& client) {
 }
 
 
+
 /*
-IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
-flowSensorSetUp()
 Parameters - none
 Return - none (function return type: void) 
 */
 void flowSensorSetUp() {
-  error = NO_ERROR;
 
-  Wire.begin();
-
-  // Make sure that sensors are in proper state to perform a address change by
-  // doing a soft reset and not sending any other commands prior to the
-  // address change procedure
-  i2c_soft_reset();
-  // SLF3x sensors need 25ms to start up after the reset
-  delay(25);
-
-  /*
-
-  // Change address of the first sensor
-  // Set IRQN_PIN_SENSOR_A to the GPIO pin number where you connected Pin 1
-  // of your first sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_A, IRQN_PIN_FLOW_SENSOR_A);
-  if (error != NO_ERROR) {
-    Serial.print("Error changing sensor address: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-
-  // Change address of the first sensor
-  // Set IRQN_PIN_SENSOR_B to the GPIO pin number where you connected Pin 1
-  // of your second sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_B, IRQN_PIN_FLOW_SENSOR_B);
-  if (error != NO_ERROR) {
-    Serial.print("Error changing sensor address: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-  */
-
-  /*
-
-  // Change address of the first sensor
-  // Set IRQN_PIN_SENSOR_B to the GPIO pin number where you connected Pin 1
-  // of your third sensor.
-  error = changeSensorAddress(Wire, I2C_ADDR_FLOW_SENSOR_C, IRQN_PIN_FLOW_SENSOR_C);
-  if (error != NO_ERROR) {
-    Serial.print("Error changing sensor address: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-  */
+  Wire.begin(); //SDA & SDL
 
   // Initialize first sensor
   Serial.println("Initialising flow sensor A");
-  flowSensorA.begin(Wire, 0x0A);
-  //readAndPrintSerial(sensorA);
-  error = flowSensorA.startH2oContinuousMeasurement();
-  if (error != NO_ERROR) {
-    Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor A: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-
-/*
-  // Initialize second sensor
-  Serial.println("Initialising flow sensor B");
-  flowSensorB.begin(Wire, 0x0B);
-  //readAndPrintSerial(sensorB);
-  error = flowSensorB.startH2oContinuousMeasurement();
-  if (error != NO_ERROR) {
-    Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor B: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-*/
-
-/*
-  // Initialize third sensor
-  Serial.println("Initialising flow sensor C");
-  flowSensorC.begin(Wire, 0x0C);
-  //readAndPrintSerial(sensorC);
-  error = flowSensorC.startH2oContinuousMeasurement();
-  if (error != NO_ERROR) {
-    Serial.print("Error trying to execute startH2oContinuousMeasurement() for sensor C: ");
-    errorToString(error, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    return;
-  }
-  */
+  flowSensorA.begin(Wire, SLF3C_1300F_I2C_ADDR_08);
+  
+  delay(100);
+  flowSensorA.startH2oContinuousMeasurement();
 }
 
-
-/*
-IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
-i2c_soft_reset()   
-Parameters - none 
-Return - none (function return type: void) 
-*/
-void i2c_soft_reset() {
-  Wire.beginTransmission(0x00);
-  size_t writtenBytes = Wire.write(0x06);
-  uint8_t i2c_error = Wire.endTransmission();
-}
-
-
-/*
-IMPORTANT - this function was copied from the program "exampleI2cAddressChange.ino" under the examples from the "Sensirion I2C SF06-LF" library   
-changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t sensorIrqPin)
-Parameters - 
-  TwoWire& wire
-  uint16_t newI2cAddress 
-  uint8_t sensorIrqPin
-Return - NO_ERROR (function return type: int16_t) 
-*/
-int16_t changeSensorAddress(TwoWire& wire, uint16_t newI2cAddress, uint8_t sensorIrqPin) {
-  uint8_t communication_buffer[5] = { 0 };
-  int16_t localError = NO_ERROR;
-  uint8_t* buffer_ptr = communication_buffer;
-
-  // Send I2C address change command 0x3661 with the new I2C address as a
-  // parameter (including CRC for the parameter)
-  SensirionI2CTxFrame txFrame = SensirionI2CTxFrame::createWithUInt16Command(0x3661, buffer_ptr, 5);
-  txFrame.addUInt16(newI2cAddress);
-  // Note that the command is sent to the default address 0x08 of the sensor
-  localError = SensirionI2CCommunication::sendFrame(SLF3C_1300F_I2C_ADDR_08, txFrame, wire);
-  if (localError != NO_ERROR) {
-    Serial.println("error sending address change command");
-    errorToString(localError, errorMessage, sizeof errorMessage);
-    Serial.println(errorMessage);
-    Serial.println("As there are multiple sensors attached initially listening on the same I2C address \
-        the acknowledge might overlap and cause an error which you can ignore if the subsequent communication is successful.");
-  }
-
-  // set IRQN pin of one sensor to high for at least 150μs to confirm address
-  // change only after this pulse has been sent the sensor actually accepts
-  // the new I2C address sent before
-  pinMode(sensorIrqPin, OUTPUT);
-  digitalWrite(sensorIrqPin, HIGH);
-  delayMicroseconds(500);
-  // reset IRQn pin back to low state
-  digitalWrite(sensorIrqPin, LOW);
-
-  // switch mode to input and listen to the pulse the sensor
-  // sends 1500μs after the address change command to confirm the new I2C
-  // address
-  pinMode(sensorIrqPin, INPUT_PULLDOWN);
-  delayMicroseconds(500);
-  uint8_t success = 0;
-  uint16_t cnt = 0;
-  while (success == 0 && cnt < 100) {
-    cnt++;
-    success = digitalRead(sensorIrqPin);
-    delayMicroseconds(10);
-  }
-  if (success == 0) {
-    // return error as sensor did not acknowledge address change
-    return -1;
-  }
-
-  Serial.print("Flow sensor address changed to: 0x");
-  if (newI2cAddress < 16) {
-    Serial.print("0");
-  }
-  Serial.println(newI2cAddress, HEX);
-  return NO_ERROR;
-}
 
 
 /*
@@ -629,8 +513,7 @@ void setupWiFiAP() {
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
-    while (true)
-      ;
+    while (true);
   }
 
   // check firmware version
