@@ -52,6 +52,7 @@ char pass[] = SECRET_PASS;  // your network password (use for WPA, or use as key
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
+/*
 // MUX1 control pins, S0-S3 (digital pins)
 int mux1S0 = 9;
 int mux1S1 = 8;
@@ -67,6 +68,25 @@ int mux2S3 = 2;
 // MUX1 and MUX2 signal pins, SIG (analog pins)
 int mux1Sig = 0;
 int mux2Sig = 1;
+*/
+
+
+// MUX1 control pins, S0-S3 (digital pins)
+int mux2S0 = 9;
+int mux2S1 = 8;
+int mux2S2 = 7;
+int mux2S3 = 6;
+
+// MUX2 control pins, S0-S3 (digital pins)
+int mux1S0 = 5;
+int mux1S1 = 4;
+int mux1S2 = 3;
+int mux1S3 = 2;
+
+// MUX1 and MUX2 signal pins, SIG (analog pins)
+int mux2Sig = 0;
+int mux1Sig = 1;
+
 
 
 // setup() function is called once when microcontroller starts
@@ -109,13 +129,13 @@ void setup() {
   Serial.println("I2C setup: "); 
 
   // change the flow sensor I2C addresses and ......
-  flowSensorSetUp();
+  //flowSensorSetUp();
 
   // set up the current sensors 
   currentSensorSetUp();
 
   // set the reference voltage for analog-to-digital conversion to an external source for accuracy
-  //analogReference(AR_EXTERNAL);
+  analogReference(AR_EXTERNAL);
 
   Serial.println("WIFI setup: "); 
 
@@ -200,7 +220,7 @@ void loop() {
         client.print(" ");
         client.println(temp);
       } else if (i < 15) {
-        // MUX channels 12-14 have pressure sensors connected so
+        // MUX channels 12-15 have pressure sensors connected so
         // read, convert, and display the pressure (in PSI) from the pressure sensors
         pressureCount += 1;
         int sig = setMux(2, i);
@@ -219,24 +239,12 @@ void loop() {
         client.print(pressureCount);
         client.print(" ");
         client.println(pressure);
-      } else {
-        // last MUX channel (C15) is not connected
-        noneCount += 1;
-
-        Serial.print(waqt);
-        Serial.print(" ");
-        Serial.print("NC");
-        Serial.println(noneCount);
-
-        client.print(waqt);
-        client.print(" ");
-        client.print("NC");
-        client.println(noneCount);
       }
+        
     }
 
     // read and display the flow rate (in ml/min) from the flow sensors
-    printFlowSensorOutput(flowSensorA, client);
+    //printFlowSensorOutput(flowSensorA, client);
 
     // read and display the voltage and current of the pump and peltier from the current sensors
     //printCurrentSensorOutput(pumpINA260, client); 
