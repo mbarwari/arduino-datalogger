@@ -35,9 +35,7 @@ uint8_t address2 = 0x41;
 void setup() {
   Serial.begin(9600);
   // Wait until serial port is opened
-  while (!Serial) { 
-    delay(10); 
-  }
+  while (!Serial) { delay(10); }
 
   Serial.println("Adafruit INA260 Test");
 
