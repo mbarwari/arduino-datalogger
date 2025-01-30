@@ -13,8 +13,13 @@ Mux 2
   S1 = pin 41
   S0 = pin 42
 
-ESP32-S2-DevKitM-1-N4R2
+ESP32-S2-DevKitM-1-N4R2 - 13-bit ADC
 */
+
+#include <driver/adc.h>
+
+//#define MUX1_ADC2_CHANNEL ADC2_CHANNEL_7  // GPIO18 (ADC2 Channel 2) - ADC2_CH7
+#define MUX2_ADC2_CHANNEL ADC2_CHANNEL_8  // GPIO19 (ADC2 Channel 8) - ADC2_CH8
 
 // Pressure sensor specifications
 const float vSupply = 3.3;  // Supply voltage
@@ -32,20 +37,20 @@ const int decimalPlaces = 3;  // Decimal places for Serial.print()
 #define TEMPERATURE_NOMINAL 25
 
 // General global variables
-unsigned long waqt;
+unsigned long waqt = 0;
 int tempCount, pressureCount, noneCount;
 
 // MUX1 control pins, S0-S3 (digital pins)
-int mux1S0 = 33;
-int mux1S1 = 26;
-int mux1S2 = 21;
 int mux1S3 = 20;
+int mux1S2 = 21;
+int mux1S1 = 26;
+int mux1S0 = 33;
 
 // MUX2 control pins, S0-S3 (digital pins)
-int mux2S0 = 42;
-int mux2S1 = 41;
-int mux2S2 = 40;
 int mux2S3 = 39;
+int mux2S2 = 40;
+int mux2S1 = 41;
+int mux2S0 = 42;
 
 // MUX1 and MUX2 signal pins, SIG (analog pins)
 int mux1Sig = 18;
@@ -55,6 +60,11 @@ int mux2Sig = 19;
 // setup() function is called once when microcontroller starts
 void setup() {
 
+  //adc2_config_channel_atten(MUX1_ADC2_CHANNEL, ADC_ATTEN_DB_11);
+  adc2_config_channel_atten(MUX2_ADC2_CHANNEL, ADC_ATTEN_DB_11);
+
+
+/*
   // set the control pins of MUX1 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from
   pinMode(mux1S0, OUTPUT);
@@ -68,6 +78,7 @@ void setup() {
   digitalWrite(mux1S1, LOW);
   digitalWrite(mux1S2, LOW);
   digitalWrite(mux1S3, LOW);
+*/
 
   // set the control pins of MUX2 (S0-S3) to be output pins
   // meaning the control pins will be used to select which one of the 16 channels to read from
@@ -77,7 +88,7 @@ void setup() {
   pinMode(mux2S3, OUTPUT);
 
   // set the initial state of MUX2 (S0-S3) control pins to LOW (0V)
-  // this initializes the multiplexer to connect to channel 0.  digitalWrite(mux2_s0, LOW);
+  // this initializes the multiplexer to connect to channel 0.
   digitalWrite(mux2S0, LOW);
   digitalWrite(mux2S1, LOW);
   digitalWrite(mux2S2, LOW);
@@ -85,8 +96,9 @@ void setup() {
 
   // starts the serial communication at a baud rate of 9600
   Serial.begin(9600);
+  delay(100);  // Allow USB Serial to initialize
   while (!Serial) {
-    delay(100);
+    delay(10);  // Wait until Serial Monitor is ready
   }
 
 }
@@ -98,8 +110,10 @@ void loop() {
   tempCount = 0;
   pressureCount = 0;
   noneCount = 0;
+
+/*
   // Loop through and read, convert, and display all 16 channels from MUX 1
-  for (int i = 0; i < 16; i++) {
+  for (int i = 15; i >= 0; i--) {
     tempCount += 1;
     int sig = setMux(1, i);
     float temp = readThermistor(sig);
@@ -111,11 +125,13 @@ void loop() {
     Serial.print(" ");
     Serial.println(temp);
   }
+*/
+
 
   // Loop through and read, convert, and display all 16 channels from MUX 2
-  for (int i = 0; i < 16; i++) {
-    if (i < 12) {
-      // MUX channels 0-11 have thermistors connected so
+  for (int i = 15; i >= 0; i--) {
+    if (i > 3) {
+      // MUX channels 4-15 have thermistors connected so
       // read, convert, and display the temperature (in Celsius) from the thermistors
       tempCount += 1;
       int sig = setMux(2, i);
@@ -127,9 +143,8 @@ void loop() {
       Serial.print(tempCount);
       Serial.print(" ");
       Serial.println(temp);
-
-    } else if (i < 15) {
-      // MUX channels 12-15 have pressure sensors connected so
+    } else {
+      // MUX channels 0-3 have pressure sensors connected so
       // read, convert, and display the pressure (in PSI) from the pressure sensors
       pressureCount += 1;
       int sig = setMux(2, i);
@@ -142,7 +157,6 @@ void loop() {
       Serial.print(" ");
       Serial.println(pressure);
     }
-        
   }
 
   // delay for 5 seconds
@@ -162,8 +176,9 @@ float readPressure(int sigPin) {
 
   for (int i = 0; i < sampleSize; i++) {
     // Read the voltage from the pressure sensor
-    // analogRead() returns an integer between 0-1023 (or 0-16383 if resolution changed to 14-bit)
-    int sensorValue = analogRead(sigPin);
+    int sensorValue = 0;
+    //esp_err_t status = adc2_get_raw(MUX1_ADC2_CHANNEL, ADC_WIDTH_BIT_13, &sensorValue);
+    esp_err_t status = adc2_get_raw(MUX2_ADC2_CHANNEL, ADC_WIDTH_BIT_13, &sensorValue);
     total += sensorValue;
     delay(0);
   }
@@ -172,8 +187,7 @@ float readPressure(int sigPin) {
   int averageSensorValue = total / sampleSize;
 
   // Convert the analog reading to voltage (0-3.3V or 0-5V)
-  //float outputVoltage = averageSensorValue * (Vsupply / 16383.0);
-  float outputVoltage = averageSensorValue * (vSupply / 1023.0);
+  float outputVoltage = averageSensorValue * (vSupply / 8191.0);
 
   //pressureApplied = ((Pmax - Pmin) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply) + Pmin 
   //pressureApplied = ((15) / (0.8 * Vsupply)) * (Output - 0.10 * Vsupply)
@@ -197,7 +211,10 @@ float readThermistor(int sigPin) {
   uint16_t val[NUM_SAMPLES] = { 0 };
   delay(50);
   for (uint8_t j = 0; j < NUM_SAMPLES; j++) {  // take N samples in a row, with a slight delay
-    val[j] = analogRead(sigPin);
+    int sensorValue = 0;
+    //esp_err_t status = adc2_get_raw(MUX1_ADC2_CHANNEL, ADC_WIDTH_BIT_13, &sensorValue);
+    esp_err_t status = adc2_get_raw(MUX2_ADC2_CHANNEL, ADC_WIDTH_BIT_13, &sensorValue);
+    val[j] = sensorValue;
     delay(0);
   }
 
@@ -205,7 +222,7 @@ float readThermistor(int sigPin) {
   for (int k = 0; k < NUM_SAMPLES; k++) {
     avgval += val[k];
   }
-  avgval = SERIES_RESISTOR / (1023 / (avgval / NUM_SAMPLES) - 1);
+  avgval = SERIES_RESISTOR / (8191.0 / (avgval / NUM_SAMPLES) - 1);
   float steinhart = 1 / ((log(avgval / THERMISTOR_NOMINAL)) / B_COEFFICIENT + 1.0 / (TEMPERATURE_NOMINAL + 273.15)) - 273.5;  // (R/Ro)
 
   return steinhart;
